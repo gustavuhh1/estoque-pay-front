@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #1b2a4a;
+  --color-ink-light: #2e4067;
+  --color-amber: #e8a33d;
+  --color-amber-dark: #c9861f;
+  --color-paper: #f7f5f0;
+  --color-paper-dim: #efece4;
+  --color-slate: #5b6472;
+  --color-stock-green: #2f7b5c;
+  --color-alert: #c1443a;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/* Barcode strip — recurring structural device, not decoration:
+   used to divide sections the way a receipt divides items. */
+.barcode-strip {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-ink) 0px,
+    var(--color-ink) 2px,
+    transparent 2px,
+    transparent 5px,
+    var(--color-ink) 5px,
+    var(--color-ink) 6px,
+    transparent 6px,
+    transparent 10px
+  );
+  height: 28px;
+  opacity: 0.85;
+}
+
+::selection {
+  background: var(--color-amber);
+  color: var(--color-ink);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+}
+
+a,
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
