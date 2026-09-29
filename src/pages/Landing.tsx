@@ -81,6 +81,8 @@ export default function Landing() {
       <header className="sticky top-0 z-20 border-b border-[var(--color-ink)]/10 bg-[var(--color-paper)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-amber)]">
+              <Boxes className="h-5 w-5 text-white" />
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-ink)]">
               <Boxes className="h-5 w-5 text-[var(--color-amber)]" />
             </div>

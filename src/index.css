@@ -5,6 +5,20 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
+  /* Palette inspired by the provided EstoquePay reference screen. */
+  --color-ink: #0d1c2e;
+  --color-ink-light: #1f3042;
+  --color-amber: #006c4a;
+  --color-amber-dark: #00563b;
+  --color-paper: #f8f9ff;
+  --color-paper-dim: #eef2f7;
+  --color-slate: #6b7280;
+  --color-stock-green: #006c4a;
+  --color-stock-green-soft: #dff2ea;
+  --color-alert: #c44848;
+  --color-alert-soft: #fce9e9;
+  --color-border: #dbe3ea;
+  --color-surface-dark: #263849;
   --color-ink: #1b2a4a;
   --color-ink-light: #2e4067;
   --color-amber: #e8a33d;
@@ -42,6 +56,7 @@ body {
 
 ::selection {
   background: var(--color-amber);
+  color: white;
   color: var(--color-ink);
 }
 

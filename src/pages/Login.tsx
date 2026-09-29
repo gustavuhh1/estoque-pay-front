@@ -1,3 +1,4 @@
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Link } from "react-router-dom"
 import { ArrowLeft, Boxes, Eye, LockKeyhole, Mail } from "lucide-react"
 
@@ -5,6 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { BarcodeStrip } from "@/components/BarcodeStrip"
+import { useAuth } from "@/auth/AuthContext"
+
+export default function Login() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { isBetterAuth, signIn } = useAuth()
+  const from = (location.state as { from?: string } | null)?.from ?? "/lojas"
+
 
 export default function Login() {
   return (
@@ -44,6 +53,8 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="mb-8 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2.5 md:hidden">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-amber)]">
+                <Boxes className="h-5 w-5 text-white" />
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-ink)]">
                 <Boxes className="h-5 w-5 text-[var(--color-amber)]" />
               </div>
@@ -62,11 +73,24 @@ export default function Login() {
             <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Entrar na sua conta</h1>
             <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">Acesse o painel de estoque e pagamentos da sua loja.</p>
 
+            <form
+              className="mt-8 space-y-5"
+              onSubmit={async (event) => {
+                event.preventDefault()
+                const form = event.currentTarget
+                const data = new FormData(form)
+                const email = String(data.get("email") ?? "")
+                const password = String(data.get("password") ?? "")
+                const success = await signIn(email, password)
+                if (success) navigate(from, { replace: true })
+              }}
+            >
             <form className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/70" />
+                  <Input id="email" name="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" />
                   <Input id="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" />
                 </div>
               </div>
@@ -79,6 +103,7 @@ export default function Login() {
                   </Link>
                 </div>
                 <div className="relative">
+                  <Input id="password" name="password" type="password" placeholder="••••••••" className="pr-10" />
                   <Input id="password" type="password" placeholder="••••••••" className="pr-10" />
                   <Eye className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/60" />
                 </div>
@@ -88,6 +113,12 @@ export default function Login() {
                 Entrar
               </Button>
             </form>
+
+            {!isBetterAuth && (
+              <p className="mt-4 rounded-xl bg-[var(--color-paper)] px-3 py-2 text-center text-[11px] leading-5 text-[var(--color-slate)]">
+                Prévia de sessão: este login usa uma sessão local apenas para testar o fluxo antes da integração com Better Auth.
+              </p>
+            )}
           </div>
 
           <p className="mt-6 text-center text-sm text-[var(--color-slate)]">
