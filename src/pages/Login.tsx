@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { ArrowLeft, Boxes, Eye, LockKeyhole, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,8 @@ export default function Login() {
   const { isBetterAuth, signIn } = useAuth()
   const from = (location.state as { from?: string } | null)?.from ?? "/lojas"
 
+
+export default function Login() {
   return (
     <div className="min-h-screen bg-[var(--color-paper)] md:grid md:grid-cols-2">
       <aside className="relative hidden overflow-hidden bg-[var(--color-ink)] text-white md:flex md:min-h-screen md:flex-col md:justify-between md:p-10 lg:p-12">
@@ -52,6 +55,8 @@ export default function Login() {
             <Link to="/" className="flex items-center gap-2.5 md:hidden">
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-amber)]">
                 <Boxes className="h-5 w-5 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-ink)]">
+                <Boxes className="h-5 w-5 text-[var(--color-amber)]" />
               </div>
               <span className="font-[family-name:var(--font-display)] text-lg font-semibold">EstoquePay</span>
             </Link>
@@ -80,11 +85,13 @@ export default function Login() {
                 if (success) navigate(from, { replace: true })
               }}
             >
+            <form className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/70" />
                   <Input id="email" name="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" />
+                  <Input id="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" />
                 </div>
               </div>
 
@@ -97,6 +104,7 @@ export default function Login() {
                 </div>
                 <div className="relative">
                   <Input id="password" name="password" type="password" placeholder="••••••••" className="pr-10" />
+                  <Input id="password" type="password" placeholder="••••••••" className="pr-10" />
                   <Eye className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/60" />
                 </div>
               </div>

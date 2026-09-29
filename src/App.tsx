@@ -2,6 +2,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { AuthProvider } from "@/auth/AuthContext"
 import ProtectedRoute from "@/auth/ProtectedRoute"
 import { StoreProvider } from "@/store/StoreContext"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+
 import Landing from "@/pages/Landing"
 import Login from "@/pages/Login"
 import Signup from "@/pages/Signup"
@@ -41,6 +43,14 @@ export default function App() {
           </Routes>
         </StoreProvider>
       </AuthProvider>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/cadastro" element={<Signup />} />
+        <Route path="/recuperar-senha" element={<ForgotPassword />} />
+        <Route path="/termos" element={<Legal type="terms" />} />
+        <Route path="/privacidade" element={<Legal type="privacy" />} />
+      </Routes>
     </BrowserRouter>
   )
 }

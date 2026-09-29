@@ -19,6 +19,15 @@
   --color-alert-soft: #fce9e9;
   --color-border: #dbe3ea;
   --color-surface-dark: #263849;
+  --color-ink: #1b2a4a;
+  --color-ink-light: #2e4067;
+  --color-amber: #e8a33d;
+  --color-amber-dark: #c9861f;
+  --color-paper: #f7f5f0;
+  --color-paper-dim: #efece4;
+  --color-slate: #5b6472;
+  --color-stock-green: #2f7b5c;
+  --color-alert: #c1443a;
 }
 
 body {
@@ -48,6 +57,7 @@ body {
 ::selection {
   background: var(--color-amber);
   color: white;
+  color: var(--color-ink);
 }
 
 html {
