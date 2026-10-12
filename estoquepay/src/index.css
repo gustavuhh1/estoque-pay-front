@@ -1,0 +1,68 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Palette inspired by the provided EstoquePay reference screen. */
+  --color-ink: #0d1c2e;
+  --color-ink-light: #1f3042;
+  --color-brand: #006c4a;
+  --color-brand-dark: #00563b;
+  --color-mint: #3ddc97; /* verde claro: use sobre fundos escuros (--color-ink) */
+  --color-paper: #f8f9ff;
+  --color-paper-dim: #eef2f7;
+  --color-slate: #6b7280;
+  --color-stock-green: #006c4a;
+  --color-stock-green-soft: #dff2ea;
+  --color-alert: #c44848;
+  --color-alert-soft: #fce9e9;
+  --color-alert-dark: #a83232; /* texto sobre alert-soft/branco (contraste ≥ 4,5:1) */
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fff1cc;
+  --color-border: #dbe3ea;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/* Barcode strip — recurring structural device, not decoration:
+   used to divide sections the way a receipt divides items. */
+.barcode-strip {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-ink) 0px,
+    var(--color-ink) 2px,
+    transparent 2px,
+    transparent 5px,
+    var(--color-ink) 5px,
+    var(--color-ink) 6px,
+    transparent 6px,
+    transparent 10px
+  );
+  height: 28px;
+  opacity: 0.85;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: white;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+}
+
+a,
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
