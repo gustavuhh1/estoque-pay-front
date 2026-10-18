@@ -1,9 +1,10 @@
 import { CircleDollarSign, Package, Receipt, ShoppingCart, TriangleAlert } from "lucide-react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 
 import DashboardHeader from "@/components/layout/DashboardHeader"
 import DashboardSidebar from "@/components/layout/DashboardSidebar"
-import { useAuth } from "@/auth/AuthContext"
+import { useAuth } from "@/auth/useAuth"
 import { Card } from "@/components/ui/card"
 
 const movements = [
@@ -30,7 +31,12 @@ const recentSales = [
   { id: "#00479", item: "Mochila Urbana", channel: "Online", total: "R$ 219,90" },
 ]
 
-const shortcuts = ["Cadastrar produto", "Registrar venda", "Conferir estoque", "Consultar pagamentos"]
+const shortcuts = [
+  { label: "Cadastrar produto", to: "/produtos" },
+  { label: "Registrar venda", to: "/pdv" },
+  { label: "Conferir estoque", to: "/estoque" },
+  { label: "Consultar pagamentos" },
+]
 
 export default function Dashboard() {
   const { session } = useAuth()
@@ -160,10 +166,18 @@ export default function Dashboard() {
           <Card className="rounded-2xl border border-[var(--color-ink)] bg-[var(--color-ink)] p-6 text-white shadow-[0_18px_50px_rgba(13,28,46,0.16)]">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-amber)]">Atalhos</p>
             <h2 className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold">Pronto para a próxima venda?</h2>
-            <p className="mt-3 text-sm leading-6 text-white/60">Os módulos de estoque, vendas e pagamentos já têm espaço reservado no layout para entrar nas próximas sprints.</p>
+            <p className="mt-3 text-sm leading-6 text-white/60">Acesse rapidamente as telas de produtos, vendas e estoque da sua loja.</p>
             <div className="mt-7 grid grid-cols-2 gap-2">
-              {shortcuts.map((action) => (
-                <button key={action} type="button" disabled className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left text-[11px] font-semibold text-white/50">{action}</button>
+              {shortcuts.map(({ label, to }) => (
+                to ? (
+                  <Link key={label} to={to} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left text-[11px] font-semibold text-white transition hover:bg-white/10">
+                    {label}
+                  </Link>
+                ) : (
+                  <button key={label} type="button" disabled className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left text-[11px] font-semibold text-white/50" title="Tela planejada para uma próxima etapa">
+                    {label}
+                  </button>
+                )
               ))}
             </div>
           </Card>
