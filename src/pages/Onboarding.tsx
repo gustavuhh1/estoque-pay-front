@@ -1,21 +1,23 @@
 import { useState, type FormEvent } from "react"
 import { ArrowLeft, ArrowRight, Boxes, Building2, Check, CircleCheck, MapPin, Phone } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
-import { useStores } from "@/store/StoreContext"
+import { useStores } from "@/store/useStores"
 
 type FormData = { name: string; cnpj: string; phone: string; city: string; state: string }
 
 export default function Onboarding() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { createStore } = useStores()
   const [step, setStep] = useState(1)
   const [saved, setSaved] = useState(false)
-  const [data, setData] = useState<FormData>({ name: "", cnpj: "", phone: "", city: "", state: "CE" })
+  const initialStoreName = (location.state as { storeName?: string } | null)?.storeName ?? ""
+  const [data, setData] = useState<FormData>({ name: initialStoreName, cnpj: "", phone: "", city: "", state: "CE" })
 
   const update = (key: keyof FormData, value: string) => setData((current) => ({ ...current, [key]: value }))
 

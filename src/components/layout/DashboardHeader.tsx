@@ -2,7 +2,7 @@ import { Bell, Menu } from "lucide-react"
 
 import UserMenu from "@/components/layout/UserMenu"
 import StoreSwitcher from "@/components/layout/StoreSwitcher"
-import { useAuth } from "@/auth/AuthContext"
+import { useAuth } from "@/auth/useAuth"
 
 type DashboardHeaderProps = {
   onOpenSidebar: () => void

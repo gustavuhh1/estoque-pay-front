@@ -1,5 +1,6 @@
 import { Ban, CircleDollarSign, Plus, Receipt, Search, ShoppingCart, Trash2 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { useLocation } from "react-router-dom"
 
 import Field from "@/components/Field"
 import PageHeader from "@/components/PageHeader"
@@ -170,11 +171,12 @@ function NewSaleForm({ onDone, onCancel }: { onDone: (sale: Sale) => void; onCan
   )
 }
 
-export default function Sales() {
+export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }) {
+  const location = useLocation()
   const { sales, products, cancelSale } = useInventory()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState("todas")
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(pointOfSale)
   const [canceling, setCanceling] = useState<Sale | null>(null)
   const [cancelError, setCancelError] = useState("")
   const [toast, setToast] = useState<{ title: string; message?: string; tone: ToastTone } | null>(null)
@@ -208,8 +210,12 @@ export default function Sales() {
     <>
       <PageHeader
         eyebrow="Operação"
-        title="Vendas"
-        description="Registre vendas, acompanhe o faturamento do dia e cancele quando necessário. O estoque é atualizado automaticamente."
+        title={location.pathname === "/pdv" ? "PDV" : "Vendas"}
+        description={
+          location.pathname === "/pdv"
+            ? "Registre uma venda e atualize o estoque automaticamente."
+            : "Acompanhe o faturamento e o histórico de vendas. Cancele uma venda quando necessário."
+        }
         actions={
           <Button variant="accent" onClick={() => setCreating(true)} disabled={products.length === 0}>
             <Plus className="h-4 w-4" />

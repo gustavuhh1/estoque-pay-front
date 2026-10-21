@@ -1,10 +1,9 @@
 import {
   Boxes,
-  ChartNoAxesColumn,
-  CircleDollarSign,
   ClipboardList,
   LayoutDashboard,
   Package,
+  Receipt,
   Settings,
   ShoppingCart,
   Users,
@@ -13,12 +12,13 @@ import {
 import { NavLink, Link } from "react-router-dom"
 
 const navigation = [
-  { label: "Visão geral", icon: LayoutDashboard, active: true },
-  { label: "Produtos", icon: Package },
-  { label: "Vendas", icon: ShoppingCart },
-  { label: "Estoque", icon: Boxes },
-  { label: "Pagamentos", icon: CircleDollarSign },
-  { label: "Relatórios", icon: ChartNoAxesColumn },
+  { label: "Painel", icon: LayoutDashboard, to: "/painel" },
+  { label: "PDV", icon: ShoppingCart, to: "/pdv" },
+  { label: "Estoque", icon: Boxes, to: "/estoque" },
+  { label: "Produtos", icon: Package, to: "/produtos" },
+  { label: "Vendas", icon: Receipt, to: "/vendas" },
+  { label: "Clientes", icon: Users, to: "/clientes" },
+  { label: "Ajustes", icon: Settings, to: "/ajustes" },
 ]
 
 type DashboardSidebarProps = {
@@ -63,13 +63,18 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         </div>
 
         <nav className="mt-3 space-y-1" aria-label="Navegação principal">
-          {navigation.map(({ label, icon: Icon, active }) =>
-            active ? (
+          {navigation.map(({ label, icon: Icon, to }) =>
+            to ? (
               <NavLink
                 key={label}
-                to="/painel"
+                to={to}
+                end
                 onClick={onClose}
-                className="flex items-center gap-3 rounded-xl bg-white/10 px-3 py-2.5 text-sm font-semibold text-white"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+                    isActive ? "bg-white/10 font-semibold text-white" : "text-white/65 hover:bg-white/5 hover:text-white"
+                  }`
+                }
               >
                 <Icon className="h-4 w-4 text-[var(--color-amber)]" />
                 <span>{label}</span>
@@ -91,18 +96,6 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         </nav>
 
         <div className="mt-auto space-y-1">
-          <div className="my-4 h-px bg-white/10" />
-          <button type="button" disabled className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40" title="Tela planejada para uma próxima etapa">
-            <Users className="h-4 w-4" />
-            Funcionários
-            <span className="ml-auto rounded-full border border-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/25">em breve</span>
-          </button>
-          <button type="button" disabled className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40" title="Tela planejada para uma próxima etapa">
-            <Settings className="h-4 w-4" />
-            Configurações
-            <span className="ml-auto rounded-full border border-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/25">em breve</span>
-          </button>
-
           <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-amber)]/15 text-[var(--color-amber)]">
