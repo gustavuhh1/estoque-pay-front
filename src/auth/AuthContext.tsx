@@ -1,31 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 
-export type UserSession = {
-  user: {
-    id: string
-    name: string
-    email: string
-  }
-  expiresAt: number
-}
-
-type AuthContextValue = {
-  session: UserSession | null
-  isLoading: boolean
-  isAuthenticated: boolean
-  isBetterAuth: boolean
-  signIn: (email: string, password: string) => Promise<boolean>
-  signUp: (name: string, email: string, password: string) => Promise<boolean>
-  signOut: () => Promise<void>
-  refreshSession: () => Promise<UserSession | null>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { AuthContext, type AuthContextValue, type UserSession } from "@/auth/auth-context"
 const DEMO_STORAGE_KEY = "estoquepay.demo.session"
 const DEMO_SESSION_TTL = 30 * 60 * 1000
 
 const betterAuthBaseUrl = import.meta.env.VITE_BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""
 const isBetterAuthConfigured = Boolean(betterAuthBaseUrl)
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 async function betterAuthGetSession() {
   const response = await fetch(`${betterAuthBaseUrl}/get-session`, {
@@ -151,8 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session, refreshSession])
 
   const signIn = useCallback(async (email: string, password: string) => {
+    const normalizedEmail = email.trim()
+    if (!EMAIL_PATTERN.test(normalizedEmail) || !password.trim()) return false
+
     if (isBetterAuthConfigured) {
-      const signedIn = await betterAuthSignIn(email, password)
+      const signedIn = await betterAuthSignIn(normalizedEmail, password)
       if (!signedIn) return false
       const current = await refreshSession()
       return Boolean(current)
@@ -164,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: {
         id: "demo-user",
         name: "Usuário EstoquePay",
-        email: email || "demo@estoquepay.local",
+        email: normalizedEmail,
       },
       expiresAt: Date.now() + DEMO_SESSION_TTL,
     }
@@ -174,8 +158,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession])
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
+    const normalizedName = name.trim()
+    const normalizedEmail = email.trim()
+    if (normalizedName.length < 2 || !EMAIL_PATTERN.test(normalizedEmail) || password.length < 8) return false
+
     if (isBetterAuthConfigured) {
-      const signedUp = await betterAuthSignUp(name, email, password)
+      const signedUp = await betterAuthSignUp(normalizedName, normalizedEmail, password)
       if (!signedUp) return false
       const current = await refreshSession()
       return Boolean(current)
@@ -184,8 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const nextSession: UserSession = {
       user: {
         id: `demo-user-${Date.now()}`,
-        name: name || "Usuário EstoquePay",
-        email: email || "demo@estoquepay.local",
+        name: normalizedName,
+        email: normalizedEmail,
       },
       expiresAt: Date.now() + DEMO_SESSION_TTL,
     }
@@ -223,10 +211,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error("useAuth precisa estar dentro de AuthProvider")
-  return context
 }

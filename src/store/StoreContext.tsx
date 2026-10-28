@@ -1,26 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 
-export type StoreRole = "Owner" | "Gestor" | "Colaborador"
-
-export type Store = {
-  id: string
-  name: string
-  cnpj: string
-  phone: string
-  city: string
-  state: string
-  role: StoreRole
-}
-
-type CreateStoreInput = Omit<Store, "id" | "role">
-
-type StoreContextValue = {
-  stores: Store[]
-  activeStore: Store
-  activeStoreId: string
-  setActiveStore: (storeId: string) => void
-  createStore: (input: CreateStoreInput) => Store
-}
+import { StoreContext, type CreateStoreInput, type Store } from "@/store/store-context"
 
 const STORAGE_KEY = "estoquepay.demo.stores"
 const ACTIVE_STORAGE_KEY = "estoquepay.demo.active-store"
@@ -80,8 +60,6 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "")
 }
 
-const StoreContext = createContext<StoreContextValue | null>(null)
-
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [stores, setStores] = useState<Store[]>(() => readStores())
   const [activeStoreId, setActiveStoreId] = useState(() => readActiveId(stores))
@@ -112,6 +90,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return created
   }, [])
 
+  const updateStore = useCallback((storeId: string, input: CreateStoreInput) => {
+    setStores((current) =>
+      current.map((store) => (store.id === storeId ? { ...store, ...input } : store)),
+    )
+  }, [])
+
   const value = useMemo(
     () => ({
       stores,
@@ -119,15 +103,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       activeStoreId,
       setActiveStore,
       createStore,
+      updateStore,
     }),
-    [activeStore, activeStoreId, createStore, setActiveStore, stores],
+    [activeStore, activeStoreId, createStore, setActiveStore, stores, updateStore],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
-}
-
-export function useStores() {
-  const context = useContext(StoreContext)
-  if (!context) throw new Error("useStores precisa estar dentro de StoreProvider")
-  return context
 }

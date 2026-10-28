@@ -2,7 +2,7 @@ import { ArrowRight, Boxes, Building2, Check, Plus, Store } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useStores } from "@/store/StoreContext"
+import { useStores } from "@/store/useStores"
 
 export default function StoreSelection() {
   const navigate = useNavigate()

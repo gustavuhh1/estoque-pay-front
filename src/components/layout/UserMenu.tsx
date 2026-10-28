@@ -2,7 +2,7 @@ import { ChevronDown, LogOut, UserRound } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { useAuth } from "@/auth/AuthContext"
+import { useAuth } from "@/auth/useAuth"
 
 export default function UserMenu() {
   const [open, setOpen] = useState(false)

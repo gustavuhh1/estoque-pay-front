@@ -1,7 +1,7 @@
 import { Check, ChevronDown, Store } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useStores } from "@/store/StoreContext"
+import { useStores } from "@/store/useStores"
 
 export default function StoreSwitcher() {
   const [open, setOpen] = useState(false)

@@ -20,6 +20,7 @@ export type StoreContextValue = {
   activeStoreId: string
   setActiveStore: (storeId: string) => void
   createStore: (input: CreateStoreInput) => Store
+  updateStore: (storeId: string, input: CreateStoreInput) => void
 }
 
 export const StoreContext = createContext<StoreContextValue | null>(null)
