@@ -17,7 +17,6 @@ import ResetPassword from "@/pages/ResetPassword"
 import Forbidden from "@/pages/Forbidden"
 import NotFound from "@/pages/NotFound"
 import NetworkError from "@/pages/NetworkError"
-import Products from "@/pages/Products"
 import Pdv from "@/pages/Pdv"
 import Sales from "@/pages/Sales"
 import Stock from "@/pages/Stock"
@@ -44,7 +43,6 @@ export default function App() {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/painel" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
                 <Route element={<DashboardLayout />}>
-                  <Route path="/produtos" element={<Products />} />
                   <Route path="/pdv" element={<Pdv />} />
                   <Route path="/vendas" element={<Sales />} />
                   <Route path="/estoque" element={<Stock />} />

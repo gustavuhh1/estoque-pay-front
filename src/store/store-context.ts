@@ -10,6 +10,8 @@ export type Store = {
   city: string
   state: string
   role: StoreRole
+  /** Switch da NFC-e (Ajustes › Fiscal). Quando ausente, vale como ligado. */
+  nfceEnabled?: boolean
 }
 
 export type CreateStoreInput = Omit<Store, "id" | "role">

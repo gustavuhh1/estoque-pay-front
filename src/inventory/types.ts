@@ -40,6 +40,8 @@ export type ProductInput = {
   unit?: Unit
   ncm?: string
   cfop?: string
+  /** Padrão: ativo. A trava fiscal pode forçar inativo. */
+  active?: boolean
 }
 
 export type PaymentMethod = "pix" | "cartao" | "dinheiro"
@@ -88,7 +90,10 @@ export type Movement = {
   reason: string
 }
 
-export type StoreInventory = { products: Product[]; sales: Sale[]; movements: Movement[] }
+export type StoreInventory = { products: Product[]; sales: Sale[]; movements: Movement[]; categories: Category[] }
+
+/** Categoria atribuída aos produtos de uma categoria excluída. */
+export const NO_CATEGORY = "Sem categoria"
 
 export type MoveInput = {
   productId: string

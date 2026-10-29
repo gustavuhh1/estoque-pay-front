@@ -1,4 +1,4 @@
-import { Boxes, LayoutDashboard, LogOut, Package, Receipt, Settings, ShoppingCart, Users, X } from "lucide-react"
+import { Boxes, LayoutDashboard, LogOut, Receipt, Settings, ShoppingCart, Users, X } from "lucide-react"
 import { NavLink, Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
@@ -8,7 +8,6 @@ const navigation = [
   { label: "Painel", icon: LayoutDashboard, to: "/painel" },
   { label: "PDV", icon: ShoppingCart, to: "/pdv" },
   { label: "Estoque", icon: Boxes, to: "/estoque" },
-  { label: "Produtos", icon: Package, to: "/produtos" },
   { label: "Clientes", icon: Users, to: "/clientes" },
   { label: "Vendas", icon: Receipt, to: "/vendas" },
   { label: "Ajustes", icon: Settings, to: "/ajustes" },

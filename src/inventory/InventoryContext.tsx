@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useAuth } from "@/auth/useAuth"
 import { InventoryContext, type InventoryContextValue } from "@/inventory/inventory-context"
 import * as logic from "@/inventory/logic"
-import type { Product, StoreInventory } from "@/inventory/types"
+import { CATEGORIES, type Product, type StoreInventory } from "@/inventory/types"
 import { useStores } from "@/store/useStores"
 
 const STORAGE_KEY = "estoquepay.demo.inventory"
@@ -20,6 +20,13 @@ function withDefaults(product: Product): Product {
   return { ...product, unit: saved.unit ?? "UN", ean: saved.ean ?? "", ncm: saved.ncm ?? "", cfop: saved.cfop ?? "" }
 }
 
+function withInventoryDefaults(inv: StoreInventory): StoreInventory {
+  const products = inv.products.map(withDefaults)
+  const saved: Partial<StoreInventory> = inv
+  const categories = saved.categories ?? [...new Set([...CATEGORIES, ...products.map((product) => product.category)])]
+  return { ...inv, products, categories }
+}
+
 function readData(): InventoryMap {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null")
@@ -29,7 +36,7 @@ function readData(): InventoryMap {
     return Object.fromEntries(
       valid.map(([storeId, inv]) => [
         storeId,
-        { ...inv, products: inv.products.map(withDefaults) },
+        withInventoryDefaults(inv),
       ]),
     )
   } catch {
@@ -85,6 +92,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       moveStock: (input) => run((inv) => logic.moveStock(inv, input)),
       registerSale: (input) => run((inv) => logic.registerSale(inv, input)),
       cancelSale: (saleId) => run((inv) => logic.cancelSale(inv, saleId)),
+      addCategory: (name) => run((inv) => logic.addCategory(inv, name)),
+      renameCategory: (from, to) => run((inv) => logic.renameCategory(inv, from, to)),
+      removeCategory: (name) => run((inv) => logic.removeCategory(inv, name)),
     }),
     [current, run],
   )

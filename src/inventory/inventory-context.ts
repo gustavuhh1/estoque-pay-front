@@ -9,6 +9,10 @@ export type InventoryContextValue = StoreInventory & {
   moveStock: (input: MoveInput) => Result<Movement>
   registerSale: (input: SaleInput) => Result<Sale>
   cancelSale: (saleId: string) => Result<Sale>
+  addCategory: (name: string) => Result<string>
+  renameCategory: (from: string, to: string) => Result<string>
+  /** Devolve quantos produtos passaram para "Sem categoria". */
+  removeCategory: (name: string) => Result<number>
 }
 
 export const InventoryContext = createContext<InventoryContextValue | null>(null)
