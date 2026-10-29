@@ -11,15 +11,15 @@ import { Card } from "@/components/ui/card"
 import { Dialog } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Toast, type ToastTone } from "@/components/ui/toast"
-import { openShift, readShifts, shiftTotals, writeShifts, type Shift } from "@/caixa/caixa"
+import { shiftTotals } from "@/caixa/caixa"
+import { useCash } from "@/caixa/useCash"
 import { downloadCsv } from "@/lib/download"
 import { formatBRL, formatDateTime, formatSaleNumber, normalizeText } from "@/lib/format"
 import { PAYMENT_LABELS, type Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
-import { useAuth } from "@/auth/useAuth"
 import { useStores } from "@/store/useStores"
 
-const FILTERS = ["Todas", "Pagas", "Canceladas"] as const
+const FILTERS = ["Todas", "Pagas", "Pendentes", "Canceladas"] as const
 type Filter = (typeof FILTERS)[number]
 
 const chip = (active: boolean) =>
@@ -31,27 +31,27 @@ const chip = (active: boolean) =>
 
 const pill = "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em]"
 
+/** Número da venda no modo demonstração, ou o código curto da venda vinda da API. */
+const saleLabel = (sale: Sale) => sale.code ?? formatSaleNumber(sale.number)
+
 const timeFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 
 export default function Sales() {
   const { activeStore } = useStores()
-  const { session } = useAuth()
   const { sales, cancelSale } = useInventory()
-  const storeId = activeStore.id
   // Cancelar venda e fechar o caixa são ações de Owner e Gestor; o Colaborador (caixa) só consulta.
   const canManage = activeStore.role !== "Colaborador"
-  const operator = session?.user.name ?? "Operador"
 
-  const [shifts, setShifts] = useState<Shift[]>(() => readShifts(storeId))
+  const cashState = useCash()
   const [filter, setFilter] = useState<Filter>("Todas")
   const [query, setQuery] = useState("")
   const [noteOf, setNoteOf] = useState<Sale | null>(null)
   const [canceling, setCanceling] = useState<Sale | null>(null)
   const [cancelError, setCancelError] = useState("")
-  const [cash, setCash] = useState<"open" | "close" | null>(null)
+  const [cashDialog, setCashDialog] = useState<"open" | "close" | null>(null)
   const [toast, setToast] = useState<{ title: string; message?: string; tone: ToastTone } | null>(null)
 
-  const shift = openShift(shifts)
+  const shift = cashState.shift
   const totals = useMemo(() => (shift ? shiftTotals(sales, shift) : null), [sales, shift])
   const canceledCount = sales.filter((sale) => sale.status === "cancelada" && (!shift || sale.createdAt >= shift.openedAt)).length
   const simulated = sales.filter((sale) => sale.status === "concluida" && sale.nfce !== false).length
@@ -62,34 +62,32 @@ export default function Sales() {
       .sort((a, b) => b.createdAt - a.createdAt)
       .filter((sale) => {
         if (filter === "Pagas" && sale.status !== "concluida") return false
+        if (filter === "Pendentes" && sale.status !== "pendente") return false
         if (filter === "Canceladas" && sale.status !== "cancelada") return false
         if (!term) return true
-        return normalizeText(`${formatSaleNumber(sale.number)} ${sale.customerName ?? ""} ${sale.items.map((item) => item.name).join(" ")}`).includes(term)
+        return normalizeText(`${saleLabel(sale)} ${sale.customerName ?? ""} ${sale.items.map((item) => item.name).join(" ")}`).includes(term)
       })
   }, [sales, filter, query])
 
-  function saveShifts(next: Shift[], message: string) {
-    if (!writeShifts(storeId, next)) return setToast({ title: "Não foi possível salvar o caixa", message: "O navegador não permitiu gravar os dados.", tone: "error" })
-    setShifts(next)
-    setCash(null)
-    setToast({ title: message, tone: "success" })
+  async function openCash(openingCents: number) {
+    const result = await cashState.open(openingCents)
+    if (!result.ok) return setToast({ title: "Não foi possível abrir o caixa", message: result.error, tone: "error" })
+    setCashDialog(null)
+    setToast({ title: "Caixa aberto", tone: "success" })
   }
 
-  function openCash(openingCents: number) {
-    saveShifts([...shifts, { id: `shift-${Date.now().toString(36)}`, openedAt: Date.now(), openingCents, operator }], "Caixa aberto")
-  }
-
-  function closeCash(countedCents: number) {
-    if (!shift || !totals) return
-    const closed: Shift = { ...shift, closedAt: Date.now(), countedCents, expectedCents: totals.expectedCashCents }
-    saveShifts(shifts.map((item) => (item.id === shift.id ? closed : item)), "Caixa fechado")
+  async function closeCash(countedCents: number) {
+    const result = await cashState.close(countedCents)
+    if (!result.ok) return setToast({ title: "Não foi possível fechar o caixa", message: result.error, tone: "error" })
+    setCashDialog(null)
+    setToast({ title: "Caixa fechado", tone: "success" })
   }
 
   async function confirmCancel() {
     if (!canceling) return
     const result = await cancelSale(canceling.id)
     if (!result.ok) return setCancelError(result.error)
-    setToast({ title: "Venda cancelada", message: `${formatSaleNumber(canceling.number)} — os itens voltaram ao estoque.`, tone: "info" })
+    setToast({ title: "Venda cancelada", message: `${saleLabel(canceling)} — os itens voltaram ao estoque.`, tone: "info" })
     setCanceling(null)
   }
 
@@ -97,7 +95,7 @@ export default function Sales() {
     downloadCsv("vendas.csv", [
       ["Venda", "Data", "Operador", "Cliente", "CPF", "Itens", "Método", "Desconto", "Total", "Situação"],
       ...rows.map((sale) => [
-        formatSaleNumber(sale.number),
+        saleLabel(sale),
         formatDateTime(sale.createdAt),
         sale.operator ?? "",
         sale.customerName ?? "Consumidor não identificado",
@@ -123,12 +121,12 @@ export default function Sales() {
               Exportar CSV
             </Button>
             {shift ? (
-              <Button variant="outline" onClick={() => setCash("close")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor fecham o caixa"}>
+              <Button variant="outline" onClick={() => setCashDialog("close")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor fecham o caixa"}>
                 <Lock className="h-4 w-4" />
                 Fechar caixa
               </Button>
             ) : (
-              <Button variant="accent" onClick={() => setCash("open")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor abrem o caixa"}>
+              <Button variant="accent" onClick={() => setCashDialog("open")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor abrem o caixa"}>
                 <LockOpen className="h-4 w-4" />
                 Abrir caixa
               </Button>
@@ -151,7 +149,7 @@ export default function Sales() {
             title="Caixa fechado"
             description="O PDV só registra vendas com o caixa aberto. Abra o caixa para começar um novo turno."
             actionLabel={canManage ? "Abrir caixa" : undefined}
-            onAction={() => setCash("open")}
+            onAction={() => setCashDialog("open")}
           />
         </div>
       )}
@@ -209,11 +207,12 @@ export default function Sales() {
             <TableBody>
               {rows.map((sale) => {
                 const done = sale.status === "concluida"
+                const pending = sale.status === "pendente"
                 const hasNote = done && sale.nfce !== false
                 return (
                   <TableRow key={sale.id} className="h-[72px]">
                     <TableCell>
-                      <p className="font-[family-name:var(--font-mono)] font-bold">{formatSaleNumber(sale.number)}</p>
+                      <p className="font-[family-name:var(--font-mono)] font-bold">{saleLabel(sale)}</p>
                       <p className="max-w-[170px] truncate text-[13px] text-[#94a3b8]">
                         {timeFormatter.format(sale.createdAt)} · {sale.operator ?? "—"}
                       </p>
@@ -225,7 +224,17 @@ export default function Sales() {
                     </TableCell>
                     <TableCell className={`text-right text-[17px] font-bold tabular-nums ${done ? "" : "text-[var(--color-slate)] line-through"}`}>{formatBRL(sale.totalCents)}</TableCell>
                     <TableCell className="text-center">
-                      <span className={`${pill} ${done ? "border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]" : "bg-[var(--color-ink)] text-white"}`}>{done ? "Pago" : "Cancelado"}</span>
+                      <span
+                        className={`${pill} ${
+                          done
+                            ? "border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]"
+                            : pending
+                              ? "border border-[#fde68a] bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
+                              : "bg-[var(--color-ink)] text-white"
+                        }`}
+                      >
+                        {done ? "Pago" : pending ? "Pendente" : "Cancelado"}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {hasNote ? <span className={`${pill} bg-[var(--color-info-soft)] text-[var(--color-info)]`}>Simulada</span> : <span className={`${pill} bg-[var(--color-paper-dim)] text-[var(--color-slate)]`}>—</span>}
@@ -234,7 +243,7 @@ export default function Sales() {
                       <span className="inline-flex gap-1">
                         <button
                           type="button"
-                          aria-label={`Ver nota simulada da venda ${formatSaleNumber(sale.number)}`}
+                          aria-label={`Ver nota simulada da venda ${saleLabel(sale)}`}
                           title={hasNote ? "Ver nota (simulada)" : "Esta venda não gerou NFC-e"}
                           disabled={!hasNote}
                           onClick={() => setNoteOf(sale)}
@@ -244,7 +253,7 @@ export default function Sales() {
                         </button>
                         <button
                           type="button"
-                          aria-label={`Cancelar venda ${formatSaleNumber(sale.number)}`}
+                          aria-label={`Cancelar venda ${saleLabel(sale)}`}
                           title={canManage ? "Cancelar venda" : "Só Owner e Gestor cancelam vendas"}
                           disabled={!done || !canManage}
                           onClick={() => {
@@ -266,13 +275,13 @@ export default function Sales() {
       </Card>
 
       {noteOf && <NoteDialog sale={noteOf} onClose={() => setNoteOf(null)} />}
-      {cash === "open" && <CashDialog mode="open" onConfirm={openCash} onClose={() => setCash(null)} />}
-      {cash === "close" && shift && totals && <CashDialog mode="close" shift={shift} totals={totals} onConfirm={closeCash} onClose={() => setCash(null)} />}
+      {cashDialog === "open" && <CashDialog mode="open" onConfirm={openCash} onClose={() => setCashDialog(null)} />}
+      {cashDialog === "close" && shift && totals && <CashDialog mode="close" shift={shift} totals={totals} onConfirm={closeCash} onClose={() => setCashDialog(null)} />}
 
       <Dialog
         open={canceling !== null}
         onClose={() => setCanceling(null)}
-        title={canceling ? `Cancelar venda ${formatSaleNumber(canceling.number)}?` : "Cancelar venda"}
+        title={canceling ? `Cancelar venda ${saleLabel(canceling)}?` : "Cancelar venda"}
         description="Os itens voltam ao estoque e a venda deixa de contar no faturamento. Essa ação não pode ser desfeita."
       >
         {canceling && (

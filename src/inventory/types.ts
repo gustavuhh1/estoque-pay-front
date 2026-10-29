@@ -64,7 +64,8 @@ export type Sale = {
   items: SaleItem[]
   totalCents: number
   payment: PaymentMethod
-  status: "concluida" | "cancelada"
+  /** "pendente": Pix gerado e ainda não pago (só existe com a API). */
+  status: "concluida" | "cancelada" | "pendente"
   canceledAt?: number
   /** Apenas dígitos. Ausente quando o consumidor não foi identificado. */
   cpf?: string
@@ -79,6 +80,10 @@ export type Sale = {
   operator?: string
   /** false quando a venda foi feita sem NFC-e (plano Free ou chave desligada). Ausente = com nota. */
   nfce?: boolean
+  /** Código curto de exibição quando a venda vem da API (que não tem número sequencial). */
+  code?: string
+  /** Taxa do Pix paga pelo consumidor (D1). Só existe em venda Pix. */
+  pixFeeCents?: number
 }
 
 export type MovementType = "entrada" | "saida" | "ajuste" | "venda" | "cancelamento"

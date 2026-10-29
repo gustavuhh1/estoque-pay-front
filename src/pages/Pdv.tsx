@@ -5,13 +5,16 @@ import { Link } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
 import PdvCheckout from "@/components/pdv/PdvCheckout"
+import PdvCheckoutApi from "@/components/pdv/PdvCheckoutApi"
 import PdvHelp from "@/components/pdv/PdvHelp"
 import { Button } from "@/components/ui/button"
 import { formatBRL, formatQuantity, normalizeText } from "@/lib/format"
 import { lineTotalCents, roundQty } from "@/inventory/logic"
 import { isFractionalUnit, type Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
-import { openShift, readShifts } from "@/caixa/caixa"
+import { useCash } from "@/caixa/useCash"
+import { config } from "@/config"
+import { searchProducts } from "@/pdv/pdvApi"
 import { useStores } from "@/store/useStores"
 
 type CartLine = { productId: string; quantity: number }
@@ -63,10 +66,12 @@ function StockBadge({ product }: { product: Product }) {
   )
 }
 
+const Checkout = config.useApi ? PdvCheckoutApi : PdvCheckout
+
 export default function Pdv() {
   const { session } = useAuth()
   const { activeStore } = useStores()
-  const { products } = useInventory()
+  const { products, isLoading } = useInventory()
   const searchRef = useRef<HTMLInputElement>(null)
 
   const [category, setCategory] = useState("Todos")
@@ -76,19 +81,40 @@ export default function Pdv() {
   const [message, setMessage] = useState("")
   const [paying, setPaying] = useState(false)
   // O PDV só vende com o caixa (turno) aberto; a abertura fica na tela de Vendas.
-  const [cashOpen] = useState(() => Boolean(openShift(readShifts(activeStore.id))))
+  const cash = useCash()
+  const cashOpen = Boolean(cash.shift)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const active = useMemo(() => products.filter((product) => product.active), [products])
-  const categories = useMemo(() => ["Todos", ...new Set(active.map((product) => product.category))], [active])
-  const byId = (id: string) => products.find((product) => product.id === id)
+  // Com a API o Caixa não lista produtos (403): ele vende pela busca do PDV, por nome ou código de barras.
+  const remoteOnly = config.useApi && activeStore.role === "Colaborador"
+  const [remote, setRemote] = useState<Product[]>([])
+  const [known, setKnown] = useState<Record<string, Product>>({})
+  const term = query.trim()
+  useEffect(() => {
+    if (!remoteOnly || !term) return
+    const timer = setTimeout(() => {
+      searchProducts(term).then(
+        (found) => {
+          setRemote(found)
+          setKnown((current) => ({ ...current, ...Object.fromEntries(found.map((product) => [product.id, product])) }))
+        },
+        () => setRemote([]),
+      )
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [remoteOnly, term])
+
+  const source = useMemo(() => (remoteOnly ? (term ? remote : []) : products), [remoteOnly, term, remote, products])
+  const active = useMemo(() => source.filter((product) => product.active), [source])
+  const categories = useMemo(() => ["Todos", ...new Set(active.map((product) => product.category).filter(Boolean))], [active])
+  const byId = (id: string) => known[id] ?? products.find((product) => product.id === id)
 
   const list = useMemo(() => {
-    const term = normalizeText(query)
+    const term = remoteOnly ? "" : normalizeText(query)
     return active.filter(
       (product) => (category === "Todos" || product.category === category) && normalizeText(`${product.name} ${product.sku} ${product.ean}`).includes(term),
     )
-  }, [active, category, query])
+  }, [active, category, query, remoteOnly])
 
   const total = cart.reduce((sum, line) => sum + lineTotalCents(byId(line.productId)?.priceCents ?? 0, line.quantity), 0)
   const units = roundQty(cart.reduce((sum, line) => sum + line.quantity, 0))
@@ -218,7 +244,7 @@ export default function Pdv() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-7 pt-5 lg:px-10">
-            {!cashOpen && (
+            {!cashOpen && !cash.isLoading && (
               <p role="alert" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm font-medium text-[var(--color-warn)]">
                 Caixa fechado: abra o caixa para registrar vendas.
                 <Link to="/vendas" className="font-bold underline">
@@ -236,8 +262,10 @@ export default function Pdv() {
                 <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-nav)] text-[var(--color-slate)]">
                   <Search className="h-6 w-6" />
                 </span>
-                <h2 className="mt-4 text-lg font-bold">Nenhum produto encontrado</h2>
-                <p className="mt-1 text-sm text-[var(--color-slate)]">Confira o nome ou tente outra categoria.</p>
+                <h2 className="mt-4 text-lg font-bold">{remoteOnly && !term ? "Busque um produto" : isLoading ? "Carregando produtos..." : "Nenhum produto encontrado"}</h2>
+                <p className="mt-1 text-sm text-[var(--color-slate)]">
+                  {remoteOnly && !term ? "Digite o nome ou bipe o código de barras." : isLoading ? "A primeira abertura pode levar até 1 minuto." : "Confira o nome ou tente outra categoria."}
+                </p>
               </div>
             ) : mode === "lista" ? (
               <div className="flex flex-col gap-2">
@@ -395,7 +423,7 @@ export default function Pdv() {
 
       <PdvHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       {paying && (
-        <PdvCheckout
+        <Checkout
           cart={cart}
           totalCents={total}
           onClose={() => setPaying(false)}
