@@ -3,6 +3,9 @@ import type { LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
 
 type Tone = "brand" | "info" | "warning" | "danger"
+type BadgeTone = Tone | "neutral"
+
+const neutralBadge = "bg-[var(--color-paper-dim)] text-[var(--color-slate)]"
 
 const tones: Record<Tone, { icon: string; badge: string }> = {
   brand: { icon: "bg-[var(--color-stock-green-soft)] text-[var(--color-amber)]", badge: "bg-[var(--color-green-100)] text-[var(--color-amber-dark)]" },
@@ -11,10 +14,10 @@ const tones: Record<Tone, { icon: string; badge: string }> = {
   danger: { icon: "bg-[var(--color-alert-soft)] text-[var(--color-alert)]", badge: "bg-[var(--color-alert-soft)] text-[var(--color-alert)]" },
 }
 
-type MetricCardProps = { icon: LucideIcon; label: string; value: string; badge?: string; tone?: Tone }
+type MetricCardProps = { icon: LucideIcon; label: string; value: string; badge?: string; tone?: Tone; badgeTone?: BadgeTone }
 
 /** Indicador do design system: ícone, selo opcional, rótulo e valor grande. */
-export default function MetricCard({ icon: Icon, label, value, badge, tone = "brand" }: MetricCardProps) {
+export default function MetricCard({ icon: Icon, label, value, badge, tone = "brand", badgeTone }: MetricCardProps) {
   const style = tones[tone]
   return (
     <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
@@ -22,7 +25,7 @@ export default function MetricCard({ icon: Icon, label, value, badge, tone = "br
         <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${style.icon}`}>
           <Icon className="h-5 w-5" />
         </span>
-        {badge && <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] ${style.badge}`}>{badge}</span>}
+        {badge && <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] ${badgeTone === "neutral" ? neutralBadge : badgeTone ? tones[badgeTone].badge : style.badge}`}>{badge}</span>}
       </div>
       <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]">{label}</p>
       <p className="mt-1 text-3xl font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
