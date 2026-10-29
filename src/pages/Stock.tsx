@@ -17,7 +17,7 @@ import { formatBRL, formatDateTime, formatQuantity, normalizeText } from "@/lib/
 import { missingFiscal, stockStatus } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
-import { useStores } from "@/store/useStores"
+import { usePlan } from "@/billing/plan"
 
 const MOVEMENT_HISTORY_LIMIT = 15
 
@@ -44,9 +44,8 @@ const quantityTone = (product: Product) => {
 }
 
 export default function Stock() {
-  const { activeStore } = useStores()
   const { products, movements, categories, setProductActive } = useInventory()
-  const nfceEnabled = activeStore.nfceEnabled ?? true
+  const { nfceOn: nfceEnabled } = usePlan()
 
   const [category, setCategory] = useState("Todos")
   const [showSearch, setShowSearch] = useState(false)

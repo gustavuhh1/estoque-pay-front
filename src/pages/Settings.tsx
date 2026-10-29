@@ -1,138 +1,91 @@
-import { useState, type FormEvent } from "react"
-import { Building2, Save } from "lucide-react"
+import { Building2, CreditCard, FileText, Users, type LucideIcon } from "lucide-react"
+import { useState } from "react"
+import { Navigate } from "react-router-dom"
 
-import Field from "@/components/Field"
+import FiscalTab from "@/components/settings/FiscalTab"
+import PlanSummary from "@/components/settings/PlanSummary"
+import ProfileTab from "@/components/settings/ProfileTab"
+import SubscriptionTab from "@/components/settings/SubscriptionTab"
+import TeamTab from "@/components/settings/TeamTab"
 import PageHeader from "@/components/PageHeader"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Toast } from "@/components/ui/toast"
+import { Toast, type ToastTone } from "@/components/ui/toast"
+import { usePlan } from "@/billing/plan"
 import { useAuth } from "@/auth/useAuth"
-import { useStores } from "@/store/useStores"
 import type { Store } from "@/store/store-context"
+import { useStores } from "@/store/useStores"
+import { readMembers } from "@/team/team"
 
-type StoreData = Omit<Store, "id" | "role">
+type TabId = "perfil" | "equipe" | "fiscal" | "plano"
 
-const states = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"]
+const TABS: { id: TabId; label: string; icon: LucideIcon; ownerOnly?: boolean }[] = [
+  { id: "perfil", label: "Perfil da empresa", icon: Building2 },
+  { id: "equipe", label: "Equipe e acessos", icon: Users },
+  { id: "fiscal", label: "Fiscal e NFC-e", icon: FileText },
+  { id: "plano", label: "Assinatura", icon: CreditCard, ownerOnly: true },
+]
 
 function StoreSettings({ store }: { store: Store }) {
-  const { updateStore } = useStores()
-  const { session, isBetterAuth } = useAuth()
-  const [form, setForm] = useState<StoreData>(() => ({
-    name: store.name,
-    cnpj: store.cnpj,
-    phone: store.phone,
-    city: store.city,
-    state: store.state,
-  }))
-  const [error, setError] = useState("")
-  const [saved, setSaved] = useState(false)
+  const { session } = useAuth()
+  const { subscription, limits, save } = usePlan()
+  const self = { name: session?.user.name ?? "Usuário", email: session?.user.email ?? "" }
+  const isOwner = store.role === "Owner"
 
-  const update = (key: keyof StoreData) => (event: { target: { value: string } }) => {
-    setForm((current) => ({ ...current, [key]: event.target.value }))
-    setError("")
-    setSaved(false)
-  }
+  const initialMembers = readMembers(store.id, { ...self, role: store.role })
+  const [tab, setTab] = useState<TabId>("perfil")
+  const [memberInfo, setMemberInfo] = useState({ pending: initialMembers.filter((member) => member.status === "convite").length, total: initialMembers.length })
+  const [toast, setToast] = useState<{ title: string; tone: ToastTone } | null>(null)
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const next = {
-      name: form.name.trim(),
-      cnpj: form.cnpj.trim(),
-      phone: form.phone.trim(),
-      city: form.city.trim(),
-      state: form.state,
-    }
-    if (next.name.length < 2) return setError("Informe o nome do estabelecimento.")
-    if (!next.cnpj || !next.phone || !next.city || !next.state) return setError("Preencha todos os dados obrigatórios.")
-    updateStore(store.id, next)
-    setForm(next)
-    setSaved(true)
-    setError("")
-  }
+  const notify = (title: string, tone: ToastTone = "success") => setToast({ title, tone })
+  const tabs = TABS.filter((item) => !item.ownerOnly || isOwner)
 
   return (
     <>
-      <PageHeader
-        eyebrow="Configurações"
-        title="Ajustes"
-        description={<>Gerencie os dados de <strong className="font-semibold text-[var(--color-ink)]">{store.name}</strong> e consulte sua sessão.</>}
-      />
+      <PageHeader title="Ajustes do Sistema" description="Gestão, segurança e auditoria da loja ativa." />
 
-      <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.8fr)]">
-        <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-7">
-          <div className="flex items-start gap-3 border-b border-[var(--color-border)] pb-5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"><Building2 className="h-5 w-5" /></span>
-            <div>
-              <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">Dados do estabelecimento</h2>
-              <p className="mt-1 text-sm text-[var(--color-slate)]">As alterações ficam salvas para a loja selecionada.</p>
-            </div>
-          </div>
-
-          <form onSubmit={submit} className="mt-6 space-y-5">
-            <Field id="settings-store-name" label="Nome da loja">
-              <Input id="settings-store-name" value={form.name} onChange={update("name")} minLength={2} autoComplete="organization" required />
-            </Field>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field id="settings-cnpj" label="CNPJ">
-                <Input id="settings-cnpj" value={form.cnpj} onChange={update("cnpj")} inputMode="numeric" required />
-              </Field>
-              <Field id="settings-phone" label="Telefone">
-                <Input id="settings-phone" type="tel" value={form.phone} onChange={update("phone")} autoComplete="tel" required />
-              </Field>
-              <Field id="settings-city" label="Cidade">
-                <Input id="settings-city" value={form.city} onChange={update("city")} autoComplete="address-level2" required />
-              </Field>
-              <Field id="settings-state" label="Estado">
-                <Select id="settings-state" value={form.state} onChange={update("state")} autoComplete="address-level1" required>
-                  {states.map((state) => <option key={state} value={state}>{state}</option>)}
-                </Select>
-              </Field>
-            </div>
-            {error && <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert)]">{error}</p>}
-            <div className="flex justify-end border-t border-[var(--color-border)] pt-5">
-              <Button type="submit" variant="accent"><Save className="h-4 w-4" />Salvar alterações</Button>
-            </div>
-          </form>
-        </Card>
-
-        <Card className="h-fit rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-6">
-          <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">Conta e acesso</h2>
-          <p className="mt-1 text-sm text-[var(--color-slate)]">Informações da sessão atual.</p>
-          <dl className="mt-5 divide-y divide-[var(--color-border)]">
-            <div className="py-3">
-              <dt className="text-xs text-[var(--color-slate)]">Nome</dt>
-              <dd className="mt-1 text-sm font-semibold">{session?.user.name ?? "Usuário"}</dd>
-            </div>
-            <div className="py-3">
-              <dt className="text-xs text-[var(--color-slate)]">E-mail</dt>
-              <dd className="mt-1 break-all text-sm font-semibold">{session?.user.email ?? "—"}</dd>
-            </div>
-            <div className="py-3">
-              <dt className="text-xs text-[var(--color-slate)]">Autenticação</dt>
-              <dd className="mt-1 text-sm font-semibold">{isBetterAuth ? "Better Auth" : "Modo demonstração"}</dd>
-            </div>
-            <div className="py-3">
-              <dt className="text-xs text-[var(--color-slate)]">Perfil na loja</dt>
-              <dd className="mt-1 text-sm font-semibold">{store.role}</dd>
-            </div>
-          </dl>
-        </Card>
+      <div role="tablist" aria-label="Seções de ajustes" className="mb-8 mt-8 flex flex-wrap gap-x-2 border-b border-[var(--color-border)]">
+        {tabs.map(({ id, label, icon: Icon }) => {
+          const active = tab === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(id)}
+              className={`-mb-px flex items-center gap-2.5 border-b-[3px] px-5 py-3.5 text-xs font-bold uppercase tracking-[0.08em] transition ${
+                active ? "border-[var(--color-amber)] text-[var(--color-amber)]" : "border-transparent text-[var(--color-slate)] hover:text-[var(--color-ink)]"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+              {id === "equipe" && memberInfo.pending > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-alert-soft)] px-1.5 text-[11px] font-bold text-[var(--color-alert)]">{memberInfo.pending}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      <Toast
-        open={saved}
-        title="Dados da loja atualizados"
-        message="As informações foram salvas neste navegador."
-        tone="success"
-        onClose={() => setSaved(false)}
-      />
+      <div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div className="flex flex-col gap-4">
+          {tab === "perfil" && <ProfileTab store={store} onSaved={notify} />}
+          {tab === "equipe" && (
+            <TeamTab storeId={store.id} actor={store.role} self={self} limits={limits} onChange={setMemberInfo} onNotify={notify} />
+          )}
+          {tab === "fiscal" && <FiscalTab store={store} limits={limits} onNotify={notify} />}
+          {tab === "plano" && isOwner && <SubscriptionTab subscription={subscription} isOwner={isOwner} onSave={save} onNotify={notify} />}
+        </div>
+        <PlanSummary subscription={subscription} limits={limits} members={memberInfo.total} />
+      </div>
+
+      <Toast open={toast !== null} title={toast?.title ?? ""} tone={toast?.tone ?? "success"} onClose={() => setToast(null)} />
     </>
   )
 }
 
 export default function SettingsPage() {
   const { activeStore } = useStores()
+  // O Caixa (Colaborador) só opera o PDV: Ajustes não é para ele.
+  if (activeStore.role === "Colaborador") return <Navigate to="/403" replace />
   return <StoreSettings key={activeStore.id} store={activeStore} />
 }

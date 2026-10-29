@@ -36,11 +36,23 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
       </div>
       <div className={dash} />
       <div className="text-center text-[11px] leading-[1.6] text-[#111]">
-        DOCUMENTO AUXILIAR DA NOTA FISCAL
-        <br />
-        DE CONSUMIDOR ELETRÔNICA
-        <br />
-        NFC-e (SIMULADO) nº {formatReceiptNumber(sale.number)} · Série 001
+        {sale.nfce === false ? (
+          <>
+            COMPROVANTE DE VENDA
+            <br />
+            (NÃO FISCAL)
+            <br />
+            Venda nº {formatReceiptNumber(sale.number)}
+          </>
+        ) : (
+          <>
+            DOCUMENTO AUXILIAR DA NOTA FISCAL
+            <br />
+            DE CONSUMIDOR ELETRÔNICA
+            <br />
+            NFC-e (SIMULADO) nº {formatReceiptNumber(sale.number)} · Série 001
+          </>
+        )}
         <br />
         {dateFormatter.format(sale.createdAt)} às {timeFormatter.format(sale.createdAt)}
       </div>
@@ -101,9 +113,9 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
       {sale.customerName && <div className="mt-0.5 text-center text-[11px] uppercase text-[#444]">{sale.customerName}</div>}
       <div className={dash} />
       <div className="rounded border border-dashed border-[#999] px-2 py-1.5 text-center text-[10px] font-bold leading-[1.5] text-[#111]">
-        DOCUMENTO SEM VALOR FISCAL — SIMULAÇÃO
+        DOCUMENTO SEM VALOR FISCAL{sale.nfce === false ? "" : " — SIMULAÇÃO"}
         <br />
-        (emissão real fora do escopo do projeto)
+        {sale.nfce === false ? "(sem emissão de NFC-e neste plano)" : "(emissão real fora do escopo do projeto)"}
       </div>
       <div className="mt-2.5 text-center text-[10px] leading-[1.6] text-[#666]">
         ESPELHO PARA CONFERÊNCIA DO OPERADOR

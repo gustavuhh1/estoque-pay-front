@@ -3,6 +3,7 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
+import { usePlan } from "@/billing/plan"
 import PdvReceipt from "@/components/pdv/PdvReceipt"
 import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   const { session } = useAuth()
   const { activeStore } = useStores()
   const { registerSale } = useInventory()
+  const { nfceOn } = usePlan()
   const customers = useMemo(() => readCustomers(activeStore.id), [activeStore.id])
   const [coupons, setCoupons] = useState(() => readCoupons(activeStore.id))
 
@@ -84,6 +86,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
       cpf: buyer ? buyer.cpf : digits.length === 11 ? digits : undefined,
       customerName: buyer?.name,
       operator,
+      nfce: nfceOn,
       receivedCents: method === "dinheiro" ? (receivedCents ?? payableCents) : undefined,
       discountCents,
       couponCode: discountCents > 0 ? found?.code : undefined,
@@ -104,7 +107,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
 
   if (sale) {
     return (
-      <Dialog open onClose={() => finish(false)} title="Venda concluída" description={`NFC-e (simulado) nº ${formatReceiptNumber(sale.number)} · ${formatBRL(sale.totalCents)}`} widthClass="max-w-[620px]">
+      <Dialog open onClose={() => finish(false)} title="Venda concluída" description={`${sale.nfce === false ? "Comprovante" : "NFC-e (simulado)"} nº ${formatReceiptNumber(sale.number)} · ${formatBRL(sale.totalCents)}`} widthClass="max-w-[620px]">
         <div className="flex flex-col gap-[18px]">
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] px-[18px] py-3.5 text-[var(--color-amber-dark)]">
             <Check className="h-[22px] w-[22px]" />

@@ -77,6 +77,8 @@ export type Sale = {
   couponCode?: string
   /** Quem registrou a venda (operador do caixa). */
   operator?: string
+  /** false quando a venda foi feita sem NFC-e (plano Free ou chave desligada). Ausente = com nota. */
+  nfce?: boolean
 }
 
 export type MovementType = "entrada" | "saida" | "ajuste" | "venda" | "cancelamento"
@@ -117,6 +119,7 @@ export type SaleInput = {
   discountCents?: number
   couponCode?: string
   operator?: string
+  nfce?: boolean
 }
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string }

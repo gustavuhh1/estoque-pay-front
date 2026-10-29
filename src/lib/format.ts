@@ -131,3 +131,14 @@ export function formatBirthDate(iso?: string) {
   const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null
   return match ? `${match[3]}/${match[2]}/${match[1]}` : ""
 }
+
+/** Máscara de CNPJ: 00.000.000/0000-00. */
+export function maskCnpj(value: string) {
+  const d = digitsOf(value).slice(0, 14)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += "." + d.slice(2, 5)
+  if (d.length > 5) out += "." + d.slice(5, 8)
+  if (d.length > 8) out += "/" + d.slice(8, 12)
+  if (d.length > 12) out += "-" + d.slice(12, 14)
+  return out
+}
