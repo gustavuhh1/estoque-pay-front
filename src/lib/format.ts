@@ -62,3 +62,38 @@ export function centsToInput(cents: number) {
 export function stockValueCents(products: Pick<Product, "costCents" | "stock">[]) {
   return products.reduce((total, product) => total + product.costCents * product.stock, 0)
 }
+
+const quantityFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 })
+
+/** Quantidade em pt-BR, até 3 casas (ex.: 4,35). */
+export function formatQuantity(value: number) {
+  return quantityFormatter.format(value)
+}
+
+/** Lê uma quantidade digitada (aceita vírgula ou ponto, até 3 casas). Devolve null se inválida. */
+export function parseQuantity(value: string) {
+  const cleaned = value.trim().replace(",", ".")
+  if (!/^\d+(?:\.\d{1,3})?$/.test(cleaned)) return null
+  const number = Number(cleaned)
+  return Number.isFinite(number) ? number : null
+}
+
+export function digitsOf(value: string) {
+  return value.replace(/\D/g, "")
+}
+
+/** Aplica a máscara 000.000.000-00 enquanto o CPF é digitado. */
+export function maskCpf(value: string) {
+  const d = digitsOf(value).slice(0, 11)
+  let out = d.slice(0, 3)
+  if (d.length > 3) out += "." + d.slice(3, 6)
+  if (d.length > 6) out += "." + d.slice(6, 9)
+  if (d.length > 9) out += "-" + d.slice(9, 11)
+  return out
+}
+
+/** Número exibido no recibo: 000.000. */
+export function formatReceiptNumber(number: number) {
+  const padded = String(number).padStart(6, "0")
+  return `${padded.slice(0, 3)}.${padded.slice(3)}`
+}

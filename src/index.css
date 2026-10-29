@@ -24,11 +24,11 @@
   --color-green-100: #d1fae5;
   --color-green-400: #10b981;
   --color-green-500: #089264;
-  --color-amber-warn: #d97706;
-  --color-amber-warn-soft: #fffbeb;
   --color-info: #2563eb;
   --color-info-soft: #eff6ff;
   --color-alert-dark: #dc2626;
+  --color-warn: #d97706;
+  --color-warn-soft: #fffbeb;
 }
 
 body {
@@ -72,4 +72,22 @@ a,
 button,
 input {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Impressão do comprovante do PDV: só o recibo aparece no papel. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none;
+    border: none;
+  }
 }
