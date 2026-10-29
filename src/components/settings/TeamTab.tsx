@@ -12,7 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Limits } from "@/billing/plan"
 import { formatBirthDate } from "@/lib/format"
 import type { StoreRole } from "@/store/store-context"
-import { ROLE_LABEL, assignableRoles, canManageMember, checkChangeRole, checkRemove, createInvite, readMembers, writeMembers, type Member } from "@/team/team"
+import { config } from "@/config"
+import { ROLE_LABEL, assignableRoles, canManageMember, checkChangeRole, checkRemove, type Member } from "@/team/team"
+import type { Team } from "@/team/useTeam"
 
 const roleTone: Record<StoreRole, string> = {
   Owner: "bg-[var(--color-amber)] text-white",
@@ -21,18 +23,17 @@ const roleTone: Record<StoreRole, string> = {
 }
 
 type TeamTabProps = {
-  storeId: string
+  team: Team
   actor: StoreRole
   self: { name: string; email: string }
   limits: Limits
-  onChange: (info: { pending: number; total: number }) => void
   onNotify: (message: string, tone?: "success" | "error" | "info") => void
 }
 
 const iso = (timestamp: number) => new Date(timestamp).toISOString().slice(0, 10)
 
-export default function TeamTab({ storeId, actor, self, limits, onChange, onNotify }: TeamTabProps) {
-  const [members, setMembers] = useState(() => readMembers(storeId, { ...self, role: actor }))
+export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTabProps) {
+  const { members } = team
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
@@ -41,14 +42,7 @@ export default function TeamTab({ storeId, actor, self, limits, onChange, onNoti
   const roles = assignableRoles(actor)
   const atLimit = limits.maxMembers !== null && members.length >= limits.maxMembers
 
-  function commit(next: Member[], message: string) {
-    if (!writeMembers(storeId, next)) return onNotify("O navegador não permitiu salvar a equipe.", "error")
-    setMembers(next)
-    onChange({ pending: next.filter((member) => member.status === "convite").length, total: next.length })
-    onNotify(message)
-  }
-
-  function sendInvite(event: FormEvent<HTMLFormElement>) {
+  async function sendInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get("email") ?? "").trim().toLowerCase()
@@ -58,32 +52,37 @@ export default function TeamTab({ storeId, actor, self, limits, onChange, onNoti
     if (members.some((member) => member.email.toLowerCase() === email)) return setError("Este e-mail já faz parte da equipe.")
     if (!roles.includes(role)) return setError("Um Gestor só pode atribuir o cargo Caixa.")
     if (atLimit) return setError(`O plano Free permite até ${limits.maxMembers} membros (contando o Owner). Assine o Premium para adicionar mais.`)
-    const member = createInvite({ name, email, role })
+    const result = await team.add({ name, email, role })
+    if (!result.ok) return setError(result.error)
     setAdding(false)
     setError("")
-    commit([...members, member], `Convite enviado para ${email}.`)
+    onNotify(`Convite enviado para ${email}.`)
   }
 
-  function saveRole(event: FormEvent<HTMLFormElement>) {
+  async function saveRole(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editing) return
     const role = String(new FormData(event.currentTarget).get("role")) as StoreRole
     const check = checkChangeRole(members, editing, role, actor, self.email)
     if (!check.ok) return setError(check.error)
     const target = editing
+    const result = await team.changeRole(target.id, role)
+    if (!result.ok) return setError(result.error)
     setEditing(null)
     setError("")
-    commit(members.map((member) => (member.id === target.id ? { ...member, role } : member)), `Cargo de ${target.name} atualizado.`)
+    onNotify(`Cargo de ${target.name} atualizado.`)
   }
 
-  function remove() {
+  async function remove() {
     if (!removing) return
     const check = checkRemove(members, removing, actor, self.email)
     if (!check.ok) return setError(check.error)
     const target = removing
+    const result = await team.remove(target.id)
+    if (!result.ok) return setError(result.error)
     setRemoving(null)
     setError("")
-    commit(members.filter((member) => member.id !== target.id), `${target.name} perdeu o acesso à loja.`)
+    onNotify(`${target.name} perdeu o acesso à loja.`)
   }
 
   return (
@@ -120,7 +119,8 @@ export default function TeamTab({ storeId, actor, self, limits, onChange, onNoti
         </TableHeader>
         <TableBody>
           {members.map((member) => {
-            const manageable = canManageMember(actor, member)
+            // Na API o convite pendente não tem rota de edição nem de remoção.
+            const manageable = canManageMember(actor, member) && !(config.useApi && member.status === "convite")
             return (
               <TableRow key={member.id} className="h-[76px]">
                 <TableCell>
