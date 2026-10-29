@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/auth/:path*", "destination": "https://estoquepay-api-csob.onrender.com/api/auth/:path*" },
+    { "source": "/api/:path*", "destination": "https://estoquepay-api-csob.onrender.com/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

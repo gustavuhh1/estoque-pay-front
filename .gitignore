@@ -92,3 +92,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel e variaveis de ambiente locais (os .env.development/.env.production nao tem segredos e ficam no repositorio)
+.vercel
+.env.local
+.env.*.local
