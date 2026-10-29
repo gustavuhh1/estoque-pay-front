@@ -1,3 +1,4 @@
+import { DEMO_CUSTOMERS, DEMO_STORE_IDS } from "@/customers/demo"
 import { normalizeText, parseMoneyToCents, parseQuantity, parseWholeNumber } from "@/lib/format"
 import {
   CATEGORIES,
@@ -299,11 +300,17 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
     items.push({ productId, name: product.name, sku: product.sku, unit: product.unit, quantity, unitCents: product.priceCents })
   }
 
-  const totalCents = items.reduce((sum, item) => sum + lineTotalCents(item.unitCents, item.quantity), 0)
+  const subtotalCents = items.reduce((sum, item) => sum + lineTotalCents(item.unitCents, item.quantity), 0)
+  const discountCents = Math.min(Math.max(0, Math.round(input.discountCents ?? 0)), subtotalCents)
+  const totalCents = subtotalCents - discountCents
   const sale: Sale = { id: uid(), number, createdAt: at, items, totalCents, payment: input.payment, status: "concluida" }
   const cpf = input.cpf?.replace(/\D/g, "")
   if (cpf) sale.cpf = cpf
   if (input.customerName) sale.customerName = input.customerName
+  if (discountCents > 0) {
+    sale.discountCents = discountCents
+    if (input.couponCode) sale.couponCode = input.couponCode
+  }
   if (input.payment === "dinheiro" && input.receivedCents !== undefined) {
     if (input.receivedCents < totalCents) return fail("O valor recebido é menor que o total da venda.")
     sale.receivedCents = input.receivedCents
@@ -339,7 +346,6 @@ export function stockValueCents(products: Product[]) {
 }
 
 // ---------- dados de demonstração (derivados pelas mesmas regras, então ficam coerentes) ----------
-const SEEDED_STORE_IDS = new Set(["ponto-certo", "centro", "shopping"])
 
 type SeedProduct = {
   sku: string
@@ -366,21 +372,21 @@ const SEED_PRODUCTS: SeedProduct[] = [
   { sku: "IOG-GRE-100", ean: "7891000612345", name: "Iogurte Grego Natural", category: "Laticínios", unit: "UN", price: 6.9, cost: 3.2, stock: 27, min: 10, ncm: "0403.20.00", cfop: "", image: "/produtos/iogurte-grego.jpg", active: false },
 ]
 
-// [minutos atrás, itens [sku, qtd][], pagamento, cancelada?]
-const SEED_SALES: [number, [string, number][], PaymentMethod, boolean?][] = [
-  [27 * 60, [["CAF-BRB-001", 2], ["LEI-ORG-A2", 3]], "cartao"],
-  [22 * 60, [["QUE-MIN-500", 0.35]], "pix"],
+// [minutos atrás, itens [sku, qtd][], pagamento, cancelada?, cliente (id dos clientes de demonstração)?]
+const SEED_SALES: [number, [string, number][], PaymentMethod, boolean?, string?][] = [
+  [27 * 60, [["CAF-BRB-001", 2], ["LEI-ORG-A2", 3]], "cartao", false, "seed-cus-marina"],
+  [22 * 60, [["QUE-MIN-500", 0.35]], "pix", false, "seed-cus-juliana"],
   [9 * 60, [["AZE-EXT-012", 2]], "dinheiro"],
-  [6 * 60, [["CHO-AMR-70", 4], ["CAF-BRB-001", 1]], "cartao"],
-  [5 * 60, [["LEI-ORG-A2", 2]], "pix"],
+  [6 * 60, [["CHO-AMR-70", 4], ["CAF-BRB-001", 1]], "cartao", false, "seed-cus-ricardo"],
+  [5 * 60, [["LEI-ORG-A2", 2]], "pix", false, "seed-cus-marina"],
   [3 * 60, [["CAF-BRB-001", 1]], "pix", true],
-  [2 * 60, [["CHO-AMR-70", 2], ["AZE-EXT-012", 1]], "dinheiro"],
+  [2 * 60, [["CHO-AMR-70", 2], ["AZE-EXT-012", 1]], "dinheiro", false, "seed-cus-juliana"],
   [60, [["QUE-MIN-500", 0.25]], "cartao"],
-  [25, [["CAF-BRB-001", 1], ["AZE-EXT-012", 1]], "pix"],
+  [25, [["CAF-BRB-001", 1], ["AZE-EXT-012", 1]], "pix", false, "seed-cus-marina"],
 ]
 
 export function seedFor(storeId: string, now = Date.now()): StoreInventory {
-  if (!SEEDED_STORE_IDS.has(storeId)) return EMPTY_INVENTORY
+  if (!DEMO_STORE_IDS.has(storeId)) return EMPTY_INVENTORY
   const minute = 60_000
 
   // O estoque inicial é "estoque atual + o que as vendas de demonstração consumiram",
@@ -414,11 +420,12 @@ export function seedFor(storeId: string, now = Date.now()): StoreInventory {
     .filter((p) => p.stock > 0)
     .map((p) => movement(p, "entrada", p.stock, "Estoque inicial", now - 72 * 60 * minute))
 
-  for (const [ago, items, payment, canceled] of SEED_SALES) {
+  for (const [ago, items, payment, canceled, customerId] of SEED_SALES) {
+    const customer = DEMO_CUSTOMERS.find((item) => item.id === customerId)
     const at = now - ago * minute
     const outcome = registerSale(
       inv,
-      { items: items.map(([sku, quantity]) => ({ productId: `seed-${sku.toLowerCase()}`, quantity })), payment },
+      { items: items.map(([sku, quantity]) => ({ productId: `seed-${sku.toLowerCase()}`, quantity })), payment, cpf: customer?.cpf, customerName: customer?.name },
       at,
       474,
     )

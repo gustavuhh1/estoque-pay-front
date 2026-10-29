@@ -97,3 +97,37 @@ export function formatReceiptNumber(number: number) {
   const padded = String(number).padStart(6, "0")
   return `${padded.slice(0, 3)}.${padded.slice(3)}`
 }
+
+/** Máscara de telefone brasileiro: (00) 00000-0000 (ou (00) 0000-0000 com 10 dígitos). */
+export function maskPhone(value: string) {
+  const d = digitsOf(value).slice(0, 11)
+  if (d.length <= 2) return d
+  const split = d.length > 10 ? 7 : 6
+  return `(${d.slice(0, 2)}) ${d.slice(2, split)}${d.length > 2 + (split - 2) ? "-" + d.slice(split) : ""}`
+}
+
+/** Máscara de data: 00/00/0000. */
+export function maskDate(value: string) {
+  const d = digitsOf(value).slice(0, 8)
+  let out = d.slice(0, 2)
+  if (d.length > 2) out += "/" + d.slice(2, 4)
+  if (d.length > 4) out += "/" + d.slice(4)
+  return out
+}
+
+/** Converte "14/03/1991" em "1991-03-14". Devolve null se a data não existir ou for futura. */
+export function parseBirthDate(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim())
+  if (!match) return null
+  const [, dd, mm, yyyy] = match
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd))
+  const valid = date.getFullYear() === Number(yyyy) && date.getMonth() === Number(mm) - 1 && date.getDate() === Number(dd)
+  if (!valid || date.getTime() > Date.now() || Number(yyyy) < 1900) return null
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/** Converte "1991-03-14" em "14/03/1991". */
+export function formatBirthDate(iso?: string) {
+  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : ""
+}

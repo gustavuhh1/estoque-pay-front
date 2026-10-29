@@ -8,6 +8,7 @@ import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { findActiveCoupon, readCoupons, writeCoupons } from "@/customers/coupons"
 import { readCustomers } from "@/customers/customers"
 import { formatBRL, digitsOf, formatReceiptNumber, maskCpf, parseMoneyToCents } from "@/lib/format"
 import type { PaymentMethod, Sale } from "@/inventory/types"
@@ -37,6 +38,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   const { activeStore } = useStores()
   const { registerSale } = useInventory()
   const customers = useMemo(() => readCustomers(activeStore.id), [activeStore.id])
+  const [coupons, setCoupons] = useState(() => readCoupons(activeStore.id))
 
   const [method, setMethod] = useState<PaymentMethod>("pix")
   const [received, setReceived] = useState("")
@@ -51,22 +53,45 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   const match = !customer && digits.length >= 5 ? customers.find((item) => digitsOf(item.cpf).length === 11 && digitsOf(item.cpf).startsWith(digits)) : null
   const isNewCpf = !customer && !match && digits.length === 11
 
+  // Cupom: precisa existir, estar ativo e pertencer ao cliente da venda (se já houver um).
+  const couponCode = coupon.trim()
+  const found = findActiveCoupon(coupons, couponCode)
+  const couponOwner = found ? (customers.find((item) => item.id === found.customerId) ?? null) : null
+  const couponError = !couponCode
+    ? ""
+    : !found
+      ? "Cupom não encontrado ou já utilizado."
+      : customer && customer.id !== found.customerId
+        ? `Este cupom pertence a ${couponOwner?.name ?? "outro cliente"}.`
+        : ""
+  const discountCents = found && !couponError ? Math.round((totalCents * found.percent) / 100) : 0
+  const payableCents = totalCents - discountCents
+
   const receivedCents = received.trim() ? parseMoneyToCents(received) : null
-  const changeCents = Math.max(0, (receivedCents ?? 0) - totalCents)
+  const changeCents = Math.max(0, (receivedCents ?? 0) - payableCents)
   const operator = session?.user.name ?? "Operador"
 
   function confirm() {
-    if (method === "dinheiro" && received.trim() && (receivedCents === null || receivedCents < totalCents)) {
+    if (couponError) return setError(couponError)
+    if (method === "dinheiro" && received.trim() && (receivedCents === null || receivedCents < payableCents)) {
       return setError("O valor recebido precisa ser igual ou maior que o total.")
     }
+    // O cupom identifica o cliente quando ele ainda não foi anexado à venda.
+    const buyer = customer ?? (discountCents > 0 ? couponOwner : null)
     const result = registerSale({
       items: cart,
       payment: method,
-      cpf: digits.length === 11 ? digits : undefined,
-      customerName: customer?.name,
-      receivedCents: method === "dinheiro" ? (receivedCents ?? totalCents) : undefined,
+      cpf: buyer ? buyer.cpf : digits.length === 11 ? digits : undefined,
+      customerName: buyer?.name,
+      receivedCents: method === "dinheiro" ? (receivedCents ?? payableCents) : undefined,
+      discountCents,
+      couponCode: discountCents > 0 ? found?.code : undefined,
     })
     if (!result.ok) return setError(result.error)
+    if (found && discountCents > 0) {
+      const next = coupons.map((item) => (item.id === found.id ? { ...item, redeemedAt: Date.now(), saleNumber: result.value.number } : item))
+      if (writeCoupons(activeStore.id, next)) setCoupons(next)
+    }
     setError("")
     setSale(result.value)
   }
@@ -115,7 +140,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   }
 
   return (
-    <Dialog open onClose={onClose} title="Pagamento" description={`Total a receber ${formatBRL(totalCents)}`} widthClass="max-w-[560px]">
+    <Dialog open onClose={onClose} title="Pagamento" description={`Total a receber ${formatBRL(payableCents)}`} widthClass="max-w-[560px]">
       <div className="flex flex-col gap-5">
         <div role="tablist" aria-label="Forma de pagamento" className="flex gap-1 rounded-2xl bg-[var(--color-nav)] p-1.5">
           {methods.map(({ value, label, icon: Icon }) => {
@@ -237,11 +262,19 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
           </Field>
         </div>
 
-        <Field id="pdv-coupon" label="Cupom de desconto (opcional)">
+        <Field
+          id="pdv-coupon"
+          label="Cupom de desconto (opcional)"
+          error={couponError || undefined}
+          hint={found && !couponError ? `Cupom ${found.code}: ${found.percent}% de desconto (−${formatBRL(discountCents)}).` : undefined}
+        >
           <Input
             id="pdv-coupon"
             value={coupon}
-            onChange={(event) => setCoupon(event.target.value)}
+            onChange={(event) => {
+              setCoupon(event.target.value)
+              setError("")
+            }}
             placeholder="Digite o código do cupom"
             className="font-[family-name:var(--font-mono)]"
           />
