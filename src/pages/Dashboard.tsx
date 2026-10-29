@@ -1,239 +1,269 @@
-import { ArrowRight, CircleDollarSign, Package, Receipt, ShoppingCart, TriangleAlert } from "lucide-react"
-import { useMemo } from "react"
+import { Boxes, DollarSign, Package, Plus, ShoppingCart, TrendingUp, TriangleAlert } from "lucide-react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 
-import { useAuth } from "@/auth/useAuth"
+import MetricCard from "@/components/MetricCard"
 import PageHeader from "@/components/PageHeader"
-import StatCard from "@/components/StatCard"
-import { SaleBadge, StockBadge } from "@/components/StatusBadge"
+import Panel from "@/components/Panel"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { needsRestock } from "@/inventory/logic"
+import { PERIOD_LABEL, dashboardMetrics, type Period } from "@/dashboard/metrics"
+import { formatBRL, formatDateTime, formatQuantity, formatSaleNumber } from "@/lib/format"
+import { needsRestock, stockStatus, stockValueCents } from "@/inventory/logic"
+import { PAYMENT_LABELS, type MovementType, type PaymentMethod, type Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
-import { formatBRL, formatDateTime, formatSaleNumber, isSameDay } from "@/lib/format"
+import { useStores } from "@/store/useStores"
+
+const PAYMENT_COLOR: Record<PaymentMethod, string> = {
+  pix: "var(--color-amber)",
+  cartao: "var(--color-info)",
+  dinheiro: "#94a3b8",
+}
+
+const MOVEMENT_REASON: Record<MovementType, { label: string; className: string }> = {
+  venda: { label: "Venda", className: "bg-[var(--color-paper-dim)] text-[var(--color-slate)]" },
+  entrada: { label: "Reabastecimento", className: "bg-[var(--color-info-soft)] text-[var(--color-info)]" },
+  saida: { label: "Saída", className: "bg-[var(--color-alert-soft)] text-[var(--color-alert)]" },
+  ajuste: { label: "Ajuste manual", className: "bg-[var(--color-info-soft)] text-[var(--color-info)]" },
+  cancelamento: { label: "Cancelamento", className: "bg-[var(--color-info-soft)] text-[var(--color-info)]" },
+}
+
+const eyebrow = "text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]"
+const pill = "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em]"
+const timeOnly = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" })
+
+const percent = (value: number) => `${value.toFixed(1).replace(".", ",")}%`
+
+function Thumb({ product, size = 44 }: { product?: Product; size?: number }) {
+  return (
+    <span style={{ width: size, height: size }} className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
+      {product?.image ? <img src={product.image} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="h-4 w-4" />}
+    </span>
+  )
+}
 
 export default function Dashboard() {
-  const { session } = useAuth()
-  const { products, sales } = useInventory()
+  const { activeStore } = useStores()
+  const { products, sales, movements } = useInventory()
+  const [period, setPeriod] = useState<Period>("hoje")
 
-  const firstName = session?.user.name?.split(" ")[0] ?? "usuário"
-  const activeProducts = useMemo(() => products.filter((product) => product.active), [products])
-  const todaySales = useMemo(
-    () => sales.filter((sale) => sale.status === "concluida" && isSameDay(sale.createdAt)),
-    [sales],
-  )
-  const revenueToday = todaySales.reduce((total, sale) => total + sale.totalCents, 0)
-  const restock = useMemo(() => needsRestock(activeProducts), [activeProducts])
-  const recentSales = useMemo(() => [...sales].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5), [sales])
-  const currentHour = new Date().getHours()
-  const hourlyRevenue = useMemo(() => {
-    const firstHour = Math.max(0, currentHour - 7)
-    const earlierSales = firstHour > 0
-      ? todaySales.filter((sale) => new Date(sale.createdAt).getHours() < firstHour)
-      : []
-    const earlierTotal = earlierSales.reduce((total, sale) => total + sale.totalCents, 0)
-    const recentHours = Array.from({ length: currentHour - firstHour + 1 }, (_, index) => {
-      const hour = firstHour + index
-      const totalCents = todaySales
-        .filter((sale) => new Date(sale.createdAt).getHours() === hour)
-        .reduce((total, sale) => total + sale.totalCents, 0)
-      return { label: `${String(hour).padStart(2, "0")}h`, totalCents }
-    })
-    return firstHour > 0
-      ? [{ label: `00–${String(firstHour - 1).padStart(2, "0")}h`, totalCents: earlierTotal }, ...recentHours]
-      : recentHours
-  }, [currentHour, todaySales])
-  const peakHourRevenue = Math.max(...hourlyRevenue.map((entry) => entry.totalCents), 1)
+  const metrics = useMemo(() => dashboardMetrics(sales, products, period), [sales, products, period])
+  const active = useMemo(() => products.filter((product) => product.active), [products])
+  const restock = useMemo(() => needsRestock(active), [active])
+  const recentSales = useMemo(() => [...sales].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4), [sales])
+  const productById = (id: string) => products.find((product) => product.id === id)
+
+  const peak = Math.max(...metrics.series.map((bar) => bar.totalCents), 1)
+  const label = PERIOD_LABEL[period].toLowerCase()
+  const delta = metrics.deltaPercent
 
   return (
     <>
       <PageHeader
-        eyebrow="Painel da loja"
-        title={`Olá, ${firstName}`}
-        description="Acompanhe os resultados de hoje e resolva o que precisa de atenção na operação."
+        title="Painel de Indicadores"
+        description={`Visão geral da loja ${activeStore.name} em tempo real.`}
         actions={
-          <Button asChild variant="accent">
-            <Link to="/pdv">
-              <ShoppingCart className="h-4 w-4" />
-              Registrar venda
-            </Link>
-          </Button>
+          <>
+            <div role="group" aria-label="Período" className="flex gap-1 rounded-full bg-[var(--color-paper-dim)] p-1">
+              {(Object.keys(PERIOD_LABEL) as Period[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={period === key}
+                  onClick={() => setPeriod(key)}
+                  className={`rounded-full px-[18px] py-2 text-[13px] font-bold transition ${period === key ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-slate)]"}`}
+                >
+                  {PERIOD_LABEL[key]}
+                </button>
+              ))}
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/pdv">
+                <ShoppingCart className="h-4 w-4" />
+                Abrir PDV
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      <section className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Produtos ativos" value={String(activeProducts.length)} meta="Disponíveis no catálogo" icon={Package} />
-        <StatCard
-          label="Vendas hoje"
-          value={String(todaySales.length)}
-          meta={todaySales.length ? "Concluídas hoje" : "Nenhuma venda hoje"}
-          icon={ShoppingCart}
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          icon={DollarSign}
+          label={`Vendas totais (${label})`}
+          value={formatBRL(metrics.salesCents)}
+          badge={delta === null ? (metrics.salesCents > 0 ? "Novo" : "Sem base") : `${delta >= 0 ? "+" : ""}${percent(delta)}`}
+          tone={delta !== null && delta < 0 ? "danger" : "brand"}
         />
-        <StatCard
-          label="Faturamento hoje"
-          value={formatBRL(revenueToday)}
-          meta="Somente vendas concluídas"
-          icon={CircleDollarSign}
-        />
-        <StatCard
-          label="Precisa de reposição"
-          value={String(restock.length)}
-          meta="Estoque baixo ou zerado"
-          icon={TriangleAlert}
-          alert={restock.length > 0}
-        />
+        <MetricCard icon={TrendingUp} tone="info" label={`Lucro bruto (${label})`} value={formatBRL(metrics.profitCents)} badge={`${percent(metrics.marginPercent)} margem`} />
+        <MetricCard icon={TriangleAlert} tone="warning" label="Baixo estoque" value={`${restock.length} ${restock.length === 1 ? "item" : "itens"}`} badge="Alerta" />
+        <MetricCard icon={Boxes} tone="danger" label="Capital imobilizado" value={formatBRL(stockValueCents(active))} badge="Estoque" badgeTone="neutral" />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-slate)]">Desempenho</p>
-              <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold">Faturamento por hora</h2>
-              <p className="mt-1 text-xs text-[var(--color-slate)]">Faturamento acumulado de hoje até agora</p>
-            </div>
-            <span className="rounded-full bg-[var(--color-stock-green-soft)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-stock-green)]">
-              Hoje
-            </span>
-          </div>
-
-          {todaySales.length === 0 ? (
-            <div className="mt-6 flex min-h-48 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-paper)] px-4 text-center text-sm text-[var(--color-slate)]">
-              O faturamento por hora aparecerá aqui quando uma venda for concluída.
-            </div>
-          ) : (
-            <div className="mt-6 overflow-x-auto rounded-xl bg-[var(--color-paper)] p-4 sm:p-5">
-              <div className="flex min-w-[560px] items-end gap-3">
-                {hourlyRevenue.map(({ label, totalCents }) => (
-                  <div
-                    key={label}
-                    className="flex min-h-44 flex-1 flex-col items-center justify-end gap-2"
-                    title={`${label} — ${formatBRL(totalCents)}`}
-                  >
-                    <span className="text-center text-[10px] font-semibold tabular-nums text-[var(--color-slate)]">
-                      {formatBRL(totalCents)}
-                    </span>
-                    <div className="flex h-28 w-full items-end rounded-t-md bg-[var(--color-paper-dim)]">
-                      <div
-                        className="w-full rounded-t-md bg-[var(--color-stock-green)] transition-[height] duration-300"
-                        style={{ height: `${totalCents ? Math.max((totalCents / peakHourRevenue) * 100, 6) : 2}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-medium text-[var(--color-slate)]">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-slate)]">Estoque</p>
-              <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold">Itens para revisar</h2>
-            </div>
-            <TriangleAlert className={`h-5 w-5 ${restock.length ? "text-[var(--color-alert)]" : "text-[var(--color-stock-green)]"}`} />
-          </div>
-
-          {restock.length === 0 ? (
-            <div className="mt-5 rounded-xl bg-[var(--color-stock-green-soft)] px-4 py-5 text-sm text-[var(--color-stock-green)]">
-              Estoque em dia. Nenhum produto precisa de reposição.
-            </div>
-          ) : (
-            <div className="mt-5 divide-y divide-[var(--color-border)]">
-              {restock.slice(0, 4).map((product) => (
-                <div key={product.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{product.name}</p>
-                    <p className="mt-1 font-mono text-[10px] text-[var(--color-slate)]">{product.sku}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <StockBadge product={product} />
-                    <span className="text-[10px] tabular-nums text-[var(--color-slate)]">
-                      {product.stock} / {product.minStock} un.
-                    </span>
-                  </div>
+      <section className="mt-8 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Panel title="Faturamento" note={`${metrics.count} ${metrics.count === 1 ? "venda" : "vendas"} · ticket médio ${formatBRL(metrics.ticketCents)}`}>
+          <div className="flex h-[220px] items-end gap-3.5 border-b border-[var(--color-border)] px-1 pt-2" role="img" aria-label={`Faturamento ${label}`}>
+            {metrics.series.map((bar) => {
+              const top = bar.totalCents === peak && peak > 1
+              return (
+                <div key={bar.label} title={formatBRL(bar.totalCents)} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5">
+                  <span className={`whitespace-nowrap ${eyebrow} ${top ? "!text-[var(--color-amber-dark)]" : ""}`}>{top ? formatBRL(bar.totalCents) : ""}</span>
+                  <span
+                    className={`w-full max-w-14 rounded-t-lg transition-[height] ${top ? "bg-[var(--color-amber)]" : "bg-[var(--color-green-200)]"}`}
+                    style={{ height: `${Math.max(2, (bar.totalCents / peak) * 170)}px` }}
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-
-          <Link
-            to="/estoque"
-            className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-stock-green)] hover:underline"
-          >
-            Ver estoque
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </Card>
-      </section>
-
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.55fr]">
-        <Card className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
-          <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-slate)]">Operação</p>
-              <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold">Vendas recentes</h2>
-            </div>
-            <Link to="/vendas" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-stock-green)] hover:underline">
-              Ver vendas
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              )
+            })}
           </div>
-          {recentSales.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <Receipt className="mx-auto h-8 w-8 text-[var(--color-slate)]" />
-              <p className="mt-3 text-sm font-semibold">Nenhuma venda registrada</p>
-              <p className="mt-1 text-xs text-[var(--color-slate)]">As vendas concluídas no PDV aparecerão aqui.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[var(--color-border)]">
-              {recentSales.map((sale) => (
-                <div key={sale.id} className="flex items-center gap-3 px-5 py-4 sm:px-6">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]">
-                    <Receipt className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                      {sale.items[0]?.name ?? "Venda sem itens"}
-                      {sale.items.length > 1 ? ` +${sale.items.length - 1}` : ""}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[var(--color-slate)]">
-                      {formatSaleNumber(sale.number)} · {formatDateTime(sale.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className="text-sm font-semibold tabular-nums">{formatBRL(sale.totalCents)}</span>
-                    <SaleBadge status={sale.status} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card className="rounded-2xl border border-[var(--color-ink)] bg-[var(--color-ink)] p-6 text-white shadow-[0_18px_50px_rgba(13,28,46,0.16)]">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-amber)]">Acesso rápido</p>
-          <h2 className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold">Continue a operação</h2>
-          <p className="mt-3 text-sm leading-6 text-white/65">Abra uma área da loja para registrar vendas ou atualizar produtos e estoque.</p>
-          <div className="mt-6 grid gap-2">
-            {[
-              { label: "Abrir PDV", to: "/pdv" },
-              { label: "Gerenciar produtos", to: "/estoque" },
-              { label: "Conferir estoque", to: "/estoque" },
-            ].map(({ label, to }) => (
-              <Link
-                key={to}
-                to={to}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                {label}
-                <ArrowRight className="h-4 w-4 text-white/60" />
-              </Link>
+          <div className="flex gap-3.5 px-1 pt-2.5">
+            {metrics.series.map((bar) => (
+              <span key={bar.label} className={`flex-1 text-center ${eyebrow}`}>
+                {bar.label}
+              </span>
             ))}
           </div>
-        </Card>
+        </Panel>
+
+        <Panel title="Formas de pagamento">
+          <div className="flex h-3.5 overflow-hidden rounded-full bg-[var(--color-paper-dim)]" aria-hidden="true">
+            {metrics.payments.map((share) => (
+              <span key={share.method} style={{ width: `${share.percent}%`, background: PAYMENT_COLOR[share.method] }} />
+            ))}
+          </div>
+          <ul className="mt-[18px] flex flex-col gap-[18px]">
+            {[...metrics.payments]
+              .sort((a, b) => b.totalCents - a.totalCents)
+              .map((share) => (
+                <li key={share.method} className="flex items-center gap-3">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: PAYMENT_COLOR[share.method] }} />
+                  <span className="flex-1 text-[15px]">{PAYMENT_LABELS[share.method]}</span>
+                  <span className="text-[13px] text-[var(--color-slate)]">{formatBRL(share.totalCents)}</span>
+                  <strong className="w-11 text-right">{share.percent}%</strong>
+                </li>
+              ))}
+          </ul>
+        </Panel>
+      </section>
+
+      <section className="mt-8 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+        <Panel title="Top Vendidos" action={{ label: "Ver tudo", to: "/estoque" }}>
+          {metrics.top.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda no período.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--color-border)]">
+              {metrics.top.map((entry) => {
+                const product = productById(entry.productId)
+                const status = product ? stockStatus(product) : "normal"
+                return (
+                  <li key={entry.productId} className="flex h-[72px] items-center gap-3.5">
+                    <Thumb product={product} />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-[15px]">{entry.name}</strong>
+                      <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">{entry.sales} {entry.sales === 1 ? "venda" : "vendas"}</span>
+                    </span>
+                    <strong className="tabular-nums">{product ? formatBRL(product.priceCents) : "—"}</strong>
+                    <span
+                      className={`${pill} ${
+                        status === "zerado"
+                          ? "bg-[var(--color-ink)] text-white"
+                          : status === "baixo"
+                            ? "border border-[#fde68a] bg-[var(--color-warn-soft)] text-[var(--color-warn)]"
+                            : "border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]"
+                      }`}
+                    >
+                      {status === "zerado" ? "Sem estoque" : status === "baixo" ? "Baixo" : "Em estoque"}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel title="Reposição necessária" action={{ label: "Ir ao estoque", to: "/estoque" }}>
+          {restock.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--color-slate)]">Tudo em ordem: nenhum produto abaixo do mínimo.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {restock.slice(0, 4).map((product) => (
+                <li key={product.id} className="flex items-center gap-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-paper)] px-3.5 py-3">
+                  <Thumb product={product} />
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-[15px]">{product.name}</strong>
+                    <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
+                      Mínimo {formatQuantity(product.minStock)} {product.unit}
+                    </span>
+                  </span>
+                  <span className={`${pill} ${product.stock <= 0 ? "bg-[var(--color-ink)] text-white" : "border border-[#fde68a] bg-[var(--color-warn-soft)] text-[var(--color-warn)]"}`}>
+                    {product.stock <= 0 ? "Zerado" : `${formatQuantity(product.stock)} ${product.unit}`}
+                  </span>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/estoque">
+                      <Plus className="h-3.5 w-3.5" />
+                      Repor
+                    </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </section>
+
+      <section className="mt-8 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+        <Panel title="Últimas vendas" action={{ label: "Histórico", to: "/vendas" }}>
+          {recentSales.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda registrada ainda.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--color-border)]">
+              {recentSales.map((sale) => {
+                const done = sale.status === "concluida"
+                const note = !done ? "Cancelada" : sale.nfce === false ? "Sem nota" : "Simulada"
+                return (
+                  <li key={sale.id} className="flex h-16 items-center gap-3">
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate">{sale.customerName ?? "Consumidor não identificado"}</strong>
+                      <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
+                        {formatSaleNumber(sale.number)} · {timeOnly.format(sale.createdAt)} · {PAYMENT_LABELS[sale.payment].toUpperCase()}
+                      </span>
+                    </span>
+                    <strong className={`tabular-nums ${done ? "" : "text-[var(--color-slate)] line-through"}`}>{formatBRL(sale.totalCents)}</strong>
+                    <span
+                      className={`${pill} ${!done ? "bg-[var(--color-ink)] text-white" : note === "Simulada" ? "bg-[var(--color-info-soft)] text-[var(--color-info)]" : "bg-[var(--color-paper-dim)] text-[var(--color-slate)]"}`}
+                    >
+                      {note}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel title="Movimentação recente" action={{ label: "Auditoria", to: "/estoque" }}>
+          {movements.length === 0 ? (
+            <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma movimentação registrada ainda.</p>
+          ) : (
+            <ul className="divide-y divide-[var(--color-border)]">
+              {movements.slice(0, 4).map((movement) => {
+                const reason = MOVEMENT_REASON[movement.type]
+                return (
+                  <li key={movement.id} className="flex h-16 items-center gap-3">
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate">{movement.productName}</strong>
+                      <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">{formatDateTime(movement.createdAt)}</span>
+                    </span>
+                    <strong className={`w-24 text-center tabular-nums ${movement.delta < 0 ? "text-[var(--color-alert)]" : "text-[var(--color-amber)]"}`}>
+                      {movement.delta > 0 ? "+" : ""}
+                      {formatQuantity(movement.delta)} {productById(movement.productId)?.unit ?? ""}
+                    </strong>
+                    <span className={`${pill} ${reason.className}`}>{reason.label}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Panel>
       </section>
     </>
   )
