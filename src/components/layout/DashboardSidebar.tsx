@@ -1,23 +1,16 @@
-import {
-  Boxes,
-  ClipboardList,
-  LayoutDashboard,
-  Package,
-  Receipt,
-  Settings,
-  ShoppingCart,
-  Users,
-  X,
-} from "lucide-react"
-import { NavLink, Link } from "react-router-dom"
+import { Boxes, LayoutDashboard, LogOut, Package, Receipt, Settings, ShoppingCart, Users, X } from "lucide-react"
+import { NavLink, Link, useNavigate } from "react-router-dom"
+
+import { useAuth } from "@/auth/useAuth"
+import { useStores } from "@/store/useStores"
 
 const navigation = [
   { label: "Painel", icon: LayoutDashboard, to: "/painel" },
   { label: "PDV", icon: ShoppingCart, to: "/pdv" },
   { label: "Estoque", icon: Boxes, to: "/estoque" },
   { label: "Produtos", icon: Package, to: "/produtos" },
-  { label: "Vendas", icon: Receipt, to: "/vendas" },
   { label: "Clientes", icon: Users, to: "/clientes" },
+  { label: "Vendas", icon: Receipt, to: "/vendas" },
   { label: "Ajustes", icon: Settings, to: "/ajustes" },
 ]
 
@@ -27,6 +20,18 @@ type DashboardSidebarProps = {
 }
 
 export default function DashboardSidebar({ open, onClose }: DashboardSidebarProps) {
+  const navigate = useNavigate()
+  const { session, signOut } = useAuth()
+  const { activeStore } = useStores()
+
+  const name = session?.user.name ?? "Usuário"
+  const initial = name.trim()[0]?.toUpperCase() ?? "U"
+
+  const handleLogout = async () => {
+    await signOut()
+    navigate("/login", { replace: true })
+  }
+
   return (
     <>
       {open && (
@@ -39,18 +44,21 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col bg-[var(--color-ink)] px-4 py-5 text-white shadow-2xl transition-transform duration-200 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-[var(--color-border)] bg-[var(--color-nav)] py-6 text-[var(--color-ink)] shadow-2xl transition-transform duration-200 lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between px-2">
-          <Link to="/painel" className="flex items-center gap-2.5" onClick={onClose}>
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-amber)] text-white">
+        <div className="flex items-center justify-between px-6">
+          <Link to="/painel" className="flex items-center gap-3" onClick={onClose}>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-amber)] text-white">
               <Boxes className="h-5 w-5" />
             </span>
-            <span className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">EstoquePay</span>
+            <span className="leading-tight">
+              <span className="block text-sm font-extrabold uppercase tracking-[0.14em]">EstoquePay</span>
+              <span className="block text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--color-slate)]">Digital Atelier</span>
+            </span>
           </Link>
           <button
             type="button"
-            className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+            className="rounded-lg p-1.5 text-[var(--color-slate)] hover:bg-white lg:hidden"
             onClick={onClose}
             aria-label="Fechar menu"
           >
@@ -58,55 +66,52 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
           </button>
         </div>
 
-        <div className="mt-8 px-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">Operação</p>
-        </div>
-
-        <nav className="mt-3 space-y-1" aria-label="Navegação principal">
-          {navigation.map(({ label, icon: Icon, to }) =>
-            to ? (
-              <NavLink
-                key={label}
-                to={to}
-                end
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
-                    isActive ? "bg-white/10 font-semibold text-white" : "text-white/65 hover:bg-white/5 hover:text-white"
-                  }`
-                }
-              >
-                <Icon className="h-4 w-4 text-[var(--color-amber)]" />
-                <span>{label}</span>
-              </NavLink>
-            ) : (
-              <button
-                key={label}
-                type="button"
-                disabled
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/40"
-                title="Tela planejada para uma próxima etapa"
-              >
-                <Icon className="h-4 w-4" />
-                <span>{label}</span>
-                <span className="ml-auto rounded-full border border-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/25">em breve</span>
-              </button>
-            ),
-          )}
+        <nav className="mt-9" aria-label="Navegação principal">
+          {navigation.map(({ label, icon: Icon, to }) => (
+            <NavLink
+              key={label}
+              to={to}
+              end
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex h-[60px] items-center gap-4 border-l-[3px] px-6 text-[15px] ${
+                  isActive
+                    ? "border-[var(--color-amber)] bg-white font-bold text-[var(--color-ink)]"
+                    : "border-transparent font-medium text-[var(--color-slate)] hover:bg-white/60 hover:text-[var(--color-ink)]"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon className={`h-5 w-5 ${isActive ? "text-[var(--color-amber)]" : ""}`} />
+                  <span>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
 
-        <div className="mt-auto space-y-1">
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-amber)]/15 text-[var(--color-amber)]">
-                <ClipboardList className="h-4 w-4" />
+        <div className="mt-auto px-[18px]">
+          <div className="rounded-2xl bg-[var(--color-stock-green-soft)] p-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-green-100)] text-sm font-bold text-[var(--color-amber)]">
+                {initial}
               </span>
-              <div>
-                <p className="text-xs font-semibold text-white">Painel da loja</p>
-                <p className="mt-0.5 text-[10px] text-white/45">Dados ilustrativos</p>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-bold">{name}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">{activeStore.role}</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-3 flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-alert)]"
+            >
+              Encerrar sessão
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
+          <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">EstoquePay v1.02.4</p>
         </div>
       </aside>
     </>
