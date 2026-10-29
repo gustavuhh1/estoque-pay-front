@@ -54,7 +54,7 @@ export default function Sales() {
   const shift = openShift(shifts)
   const totals = useMemo(() => (shift ? shiftTotals(sales, shift) : null), [sales, shift])
   const canceledCount = sales.filter((sale) => sale.status === "cancelada" && (!shift || sale.createdAt >= shift.openedAt)).length
-  const simulated = sales.filter((sale) => sale.status === "concluida").length
+  const simulated = sales.filter((sale) => sale.status === "concluida" && sale.nfce !== false).length
 
   const rows = useMemo(() => {
     const term = normalizeText(query).replace(/^#/, "")
@@ -209,6 +209,7 @@ export default function Sales() {
             <TableBody>
               {rows.map((sale) => {
                 const done = sale.status === "concluida"
+                const hasNote = done && sale.nfce !== false
                 return (
                   <TableRow key={sale.id} className="h-[72px]">
                     <TableCell>
@@ -227,15 +228,15 @@ export default function Sales() {
                       <span className={`${pill} ${done ? "border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]" : "bg-[var(--color-ink)] text-white"}`}>{done ? "Pago" : "Cancelado"}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      {done ? <span className={`${pill} bg-[var(--color-info-soft)] text-[var(--color-info)]`}>Simulada</span> : <span className={`${pill} bg-[var(--color-paper-dim)] text-[var(--color-slate)]`}>—</span>}
+                      {hasNote ? <span className={`${pill} bg-[var(--color-info-soft)] text-[var(--color-info)]`}>Simulada</span> : <span className={`${pill} bg-[var(--color-paper-dim)] text-[var(--color-slate)]`}>—</span>}
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="inline-flex gap-1">
                         <button
                           type="button"
                           aria-label={`Ver nota simulada da venda ${formatSaleNumber(sale.number)}`}
-                          title="Ver nota (simulada)"
-                          disabled={!done}
+                          title={hasNote ? "Ver nota (simulada)" : "Esta venda não gerou NFC-e"}
+                          disabled={!hasNote}
                           onClick={() => setNoteOf(sale)}
                           className="rounded-lg p-2 text-[var(--color-slate)] transition hover:bg-[var(--color-paper-dim)] hover:text-[var(--color-ink)] disabled:opacity-40"
                         >

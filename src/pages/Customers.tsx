@@ -14,6 +14,7 @@ import { isActive, newCouponCode, readCoupons, writeCoupons, type Coupon } from 
 import { readCustomers, writeCustomers, type Customer } from "@/customers/customers"
 import { customerStats, walkInStats } from "@/customers/metrics"
 import { digitsOf, formatBRL, formatBirthDate, formatDateTime, formatSaleNumber, normalizeText } from "@/lib/format"
+import { usePlan } from "@/billing/plan"
 import { useInventory } from "@/inventory/useInventory"
 import { useStores } from "@/store/useStores"
 
@@ -40,6 +41,7 @@ function Badge({ active, children }: { active: boolean; children: string }) {
 
 function CustomerManager({ storeId }: { storeId: string }) {
   const { sales } = useInventory()
+  const { limits } = usePlan()
   const [customers, setCustomers] = useState(() => readCustomers(storeId))
   const [coupons, setCoupons] = useState(() => readCoupons(storeId))
   const [selectedId, setSelectedId] = useState<string>(() => readCustomers(storeId)[0]?.id ?? WALK_IN)
@@ -104,7 +106,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
         description="Cadastro, histórico de compras e programa de fidelidade."
         actions={
           <>
-            <Button variant="outline" onClick={() => setIssuing(true)}>
+            <Button variant="outline" onClick={() => setIssuing(true)} disabled={!limits.crmFull} title={limits.crmFull ? undefined : "Cupons de fidelidade são do plano Premium"}>
               <Ticket className="h-4 w-4" />
               Emitir cupom
             </Button>
@@ -297,6 +299,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
           customers={customers}
           onSave={save}
           onDelete={editing === "new" ? undefined : () => setDeleting(editing)}
+          restricted={!limits.crmFull}
           onClose={() => setEditing(null)}
         />
       )}

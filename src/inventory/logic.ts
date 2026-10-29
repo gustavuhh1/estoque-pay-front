@@ -308,6 +308,7 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
   if (cpf) sale.cpf = cpf
   if (input.customerName) sale.customerName = input.customerName
   if (input.operator) sale.operator = input.operator
+  if (input.nfce === false) sale.nfce = false
   if (discountCents > 0) {
     sale.discountCents = discountCents
     if (input.couponCode) sale.couponCode = input.couponCode

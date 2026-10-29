@@ -11,6 +11,7 @@ import { centsToInput, formatQuantity } from "@/lib/format"
 import { missingFiscal, validateProductForm, type ProductFormErrors, type RawProductForm } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import { usePlan } from "@/billing/plan"
 import { useStores } from "@/store/useStores"
 
 const mono = "font-[family-name:var(--font-mono)]"
@@ -21,7 +22,7 @@ const unitOptions = [
   { value: "LT", label: "Fracionado (litro)" },
 ]
 
-const toForm = (product: Product | null, firstCategory: string): RawProductForm =>
+const toForm = (product: Product | null, firstCategory: string, defaultCfop: string): RawProductForm =>
   product
     ? {
         name: product.name,
@@ -35,7 +36,7 @@ const toForm = (product: Product | null, firstCategory: string): RawProductForm 
         minStock: formatQuantity(product.minStock),
         active: product.active,
       }
-    : { name: "", ean: "", unit: "UN", category: firstCategory, cost: "", price: "", ncm: "", cfop: "", minStock: "10", active: true }
+    : { name: "", ean: "", unit: "UN", category: firstCategory, cost: "", price: "", ncm: "", cfop: defaultCfop, minStock: "10", active: true }
 
 type ProductDialogProps = {
   /** Produto em edição, ou null para cadastrar um novo. */
@@ -47,9 +48,9 @@ type ProductDialogProps = {
 export default function ProductDialog({ product, onClose, onSaved }: ProductDialogProps) {
   const { activeStore } = useStores()
   const { products, categories, createProduct, updateProduct } = useInventory()
-  const nfceEnabled = activeStore.nfceEnabled ?? true
+  const { nfceOn: nfceEnabled, limits } = usePlan()
 
-  const [form, setForm] = useState<RawProductForm>(() => toForm(product, categories[0] ?? ""))
+  const [form, setForm] = useState<RawProductForm>(() => toForm(product, categories[0] ?? "", activeStore.cfopDefault ?? ""))
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [formError, setFormError] = useState("")
 
@@ -75,6 +76,11 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
     })
     setErrors(found)
     if (!input) return
+    // Plano Free: no máximo 50 produtos ativos (RN01). Vale para novo produto e para reativar.
+    const activeCount = products.filter((item) => item.active).length
+    const becomesActive = Boolean(input.active) && !product?.active
+    if (limits.maxProducts !== null && becomesActive && activeCount >= limits.maxProducts)
+      return setFormError(`O plano Free permite até ${limits.maxProducts} produtos ativos. Inative um produto ou assine o Premium.`)
     const result = product ? updateProduct(product.id, input) : createProduct({ ...input, stock: 0 })
     if (!result.ok) return setFormError(result.error)
     onSaved(

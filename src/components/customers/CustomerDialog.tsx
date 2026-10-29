@@ -22,9 +22,11 @@ type CustomerDialogProps = {
   onSave: (data: CustomerData) => boolean
   onDelete?: () => void
   onClose: () => void
+  /** Plano Free: só CPF e nome. */
+  restricted?: boolean
 }
 
-export default function CustomerDialog({ customer, customers, onSave, onDelete, onClose }: CustomerDialogProps) {
+export default function CustomerDialog({ customer, customers, onSave, onDelete, onClose, restricted = false }: CustomerDialogProps) {
   const [cpf, setCpf] = useState(customer?.cpf ?? "")
   const [name, setName] = useState(customer?.name ?? "")
   const [phone, setPhone] = useState(customer?.phone ?? "")
@@ -41,18 +43,18 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
     if (!isValidCpf(cpf)) found.cpf = "Informe um CPF válido."
     else if (customers.some((item) => item.id !== customer?.id && digitsOf(item.cpf) === digitsOf(cpf))) found.cpf = "Já existe um cliente com este CPF nesta loja."
     if (name.trim().length < 2) found.name = "Informe o nome completo."
-    if (phone.trim() && ![10, 11].includes(digitsOf(phone).length)) found.phone = "Informe DDD e número (ex.: (81) 99999-0000)."
-    const birthDate = birth.trim() ? parseBirthDate(birth) : undefined
-    if (birth.trim() && !birthDate) found.birth = "Use uma data válida no formato 00/00/0000."
+    if (!restricted && phone.trim() && ![10, 11].includes(digitsOf(phone).length)) found.phone = "Informe DDD e número (ex.: (81) 99999-0000)."
+    const birthDate = !restricted && birth.trim() ? parseBirthDate(birth) : customer?.birthDate
+    if (!restricted && birth.trim() && !birthDate) found.birth = "Use uma data válida no formato 00/00/0000."
     setErrors(found)
     if (Object.keys(found).length > 0) return
     const saved = onSave({
       cpf: maskCpf(cpf),
       name: name.trim(),
-      phone: phone.trim(),
+      phone: restricted ? (customer?.phone ?? "") : phone.trim(),
       email: customer?.email ?? "",
       birthDate: birthDate ?? undefined,
-      notes: notes.trim() || undefined,
+      notes: restricted ? customer?.notes : notes.trim() || undefined,
     })
     if (!saved) setFormError("Não foi possível salvar os dados neste navegador.")
   }
@@ -62,7 +64,7 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
       open
       onClose={onClose}
       title={customer ? "Editar cliente" : "Novo cliente"}
-      description="CPF e nome são os únicos campos disponíveis no plano Free."
+      description={restricted ? "CPF e nome são os únicos campos disponíveis no plano Free." : "Cadastro completo do cliente."}
       widthClass="max-w-[560px]"
     >
       <form onSubmit={submit} noValidate>
@@ -73,6 +75,8 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
           <Field id="customer-name" label="Nome completo *" error={errors.name}>
             <Input id="customer-name" value={name} onChange={(event) => { setName(event.target.value); setErrors((e) => ({ ...e, name: undefined })) }} placeholder="Ex: Marina Duarte" autoComplete="off" {...aria("name")} />
           </Field>
+          {!restricted && (
+            <>
           <Field id="customer-phone" label="Telefone" error={errors.phone}>
             <Input id="customer-phone" value={phone} onChange={(event) => { setPhone(maskPhone(event.target.value)); setErrors((e) => ({ ...e, phone: undefined })) }} inputMode="tel" placeholder="(00) 00000-0000" className={mono} {...aria("phone")} />
           </Field>
@@ -84,6 +88,8 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
               <Input id="customer-notes" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Preferências, restrições, combinados com a loja..." maxLength={200} />
             </Field>
           </div>
+            </>
+          )}
         </div>
 
         {formError && (
