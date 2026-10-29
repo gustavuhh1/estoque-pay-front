@@ -3,9 +3,11 @@ import { useState } from "react"
 import { Navigate } from "react-router-dom"
 
 import FiscalTab from "@/components/settings/FiscalTab"
+import FiscalTabApi from "@/components/settings/FiscalTabApi"
 import PlanSummary from "@/components/settings/PlanSummary"
 import ProfileTab from "@/components/settings/ProfileTab"
 import SubscriptionTab from "@/components/settings/SubscriptionTab"
+import SubscriptionTabApi from "@/components/settings/SubscriptionTabApi"
 import TeamTab from "@/components/settings/TeamTab"
 import PageHeader from "@/components/PageHeader"
 import { Toast, type ToastTone } from "@/components/ui/toast"
@@ -13,7 +15,8 @@ import { usePlan } from "@/billing/plan"
 import { useAuth } from "@/auth/useAuth"
 import type { Store } from "@/store/store-context"
 import { useStores } from "@/store/useStores"
-import { readMembers } from "@/team/team"
+import { config } from "@/config"
+import { useTeam } from "@/team/useTeam"
 
 type TabId = "perfil" | "equipe" | "fiscal" | "plano"
 
@@ -26,13 +29,13 @@ const TABS: { id: TabId; label: string; icon: LucideIcon; ownerOnly?: boolean }[
 
 function StoreSettings({ store }: { store: Store }) {
   const { session } = useAuth()
-  const { subscription, limits, save } = usePlan()
+  const { subscription, limits, save, restricted, isLoading: planLoading, refresh } = usePlan()
   const self = { name: session?.user.name ?? "Usuário", email: session?.user.email ?? "" }
   const isOwner = store.role === "Owner"
 
-  const initialMembers = readMembers(store.id, { ...self, role: store.role })
+  const team = useTeam(store.id, { ...self, role: store.role })
   const [tab, setTab] = useState<TabId>("perfil")
-  const [memberInfo, setMemberInfo] = useState({ pending: initialMembers.filter((member) => member.status === "convite").length, total: initialMembers.length })
+  const memberInfo = { pending: team.members.filter((member) => member.status === "convite").length, total: team.members.length }
   const [toast, setToast] = useState<{ title: string; tone: ToastTone } | null>(null)
 
   const notify = (title: string, tone: ToastTone = "success") => setToast({ title, tone })
@@ -70,10 +73,16 @@ function StoreSettings({ store }: { store: Store }) {
         <div className="flex flex-col gap-4">
           {tab === "perfil" && <ProfileTab store={store} onSaved={notify} />}
           {tab === "equipe" && (
-            <TeamTab storeId={store.id} actor={store.role} self={self} limits={limits} onChange={setMemberInfo} onNotify={notify} />
+            <TeamTab team={team} actor={store.role} self={self} limits={limits} onNotify={notify} />
           )}
-          {tab === "fiscal" && <FiscalTab store={store} limits={limits} onNotify={notify} />}
-          {tab === "plano" && isOwner && <SubscriptionTab subscription={subscription} isOwner={isOwner} onSave={save} onNotify={notify} />}
+          {tab === "fiscal" && (config.useApi ? <FiscalTabApi store={store} limits={limits} onNotify={notify} /> : <FiscalTab store={store} limits={limits} onNotify={notify} />)}
+          {tab === "plano" &&
+            isOwner &&
+            (config.useApi ? (
+              <SubscriptionTabApi subscription={subscription} restricted={restricted} isOwner={isOwner} isLoading={planLoading} refresh={refresh} onNotify={notify} />
+            ) : (
+              <SubscriptionTab subscription={subscription} isOwner={isOwner} onSave={save} onNotify={notify} />
+            ))}
         </div>
         <PlanSummary subscription={subscription} limits={limits} members={memberInfo.total} />
       </div>
