@@ -307,6 +307,7 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
   const cpf = input.cpf?.replace(/\D/g, "")
   if (cpf) sale.cpf = cpf
   if (input.customerName) sale.customerName = input.customerName
+  if (input.operator) sale.operator = input.operator
   if (discountCents > 0) {
     sale.discountCents = discountCents
     if (input.couponCode) sale.couponCode = input.couponCode
@@ -420,12 +421,12 @@ export function seedFor(storeId: string, now = Date.now()): StoreInventory {
     .filter((p) => p.stock > 0)
     .map((p) => movement(p, "entrada", p.stock, "Estoque inicial", now - 72 * 60 * minute))
 
-  for (const [ago, items, payment, canceled, customerId] of SEED_SALES) {
+  for (const [index, [ago, items, payment, canceled, customerId]] of SEED_SALES.entries()) {
     const customer = DEMO_CUSTOMERS.find((item) => item.id === customerId)
     const at = now - ago * minute
     const outcome = registerSale(
       inv,
-      { items: items.map(([sku, quantity]) => ({ productId: `seed-${sku.toLowerCase()}`, quantity })), payment, cpf: customer?.cpf, customerName: customer?.name },
+      { items: items.map(([sku, quantity]) => ({ productId: `seed-${sku.toLowerCase()}`, quantity })), payment, cpf: customer?.cpf, customerName: customer?.name, operator: index % 3 === 2 ? "Ana Lima" : "Carlos Santos" },
       at,
       474,
     )

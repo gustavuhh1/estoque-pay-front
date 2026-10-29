@@ -83,6 +83,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
       payment: method,
       cpf: buyer ? buyer.cpf : digits.length === 11 ? digits : undefined,
       customerName: buyer?.name,
+      operator,
       receivedCents: method === "dinheiro" ? (receivedCents ?? payableCents) : undefined,
       discountCents,
       couponCode: discountCents > 0 ? found?.code : undefined,
