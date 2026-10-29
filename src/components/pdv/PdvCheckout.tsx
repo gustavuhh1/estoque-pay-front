@@ -73,14 +73,14 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   const changeCents = Math.max(0, (receivedCents ?? 0) - payableCents)
   const operator = session?.user.name ?? "Operador"
 
-  function confirm() {
+  async function confirm() {
     if (couponError) return setError(couponError)
     if (method === "dinheiro" && received.trim() && (receivedCents === null || receivedCents < payableCents)) {
       return setError("O valor recebido precisa ser igual ou maior que o total.")
     }
     // O cupom identifica o cliente quando ele ainda não foi anexado à venda.
     const buyer = customer ?? (discountCents > 0 ? couponOwner : null)
-    const result = registerSale({
+    const result = await registerSale({
       items: cart,
       payment: method,
       cpf: buyer ? buyer.cpf : digits.length === 11 ? digits : undefined,

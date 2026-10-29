@@ -40,10 +40,10 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
       ? roundQty(type === "entrada" ? product.stock + parsed : type === "saida" ? product.stock - parsed : parsed)
       : null
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     if (parsed === null) return setError("Informe uma quantidade válida (0 ou mais, até 3 casas decimais).")
-    const result = moveStock({ productId, type, quantity: parsed, reason })
+    const result = await moveStock({ productId, type, quantity: parsed, reason })
     if (!result.ok) return setError(result.error)
     onDone(`${result.value.productName}: saldo ${formatQuantity(result.value.balance)}`)
   }

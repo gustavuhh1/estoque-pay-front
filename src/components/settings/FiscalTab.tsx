@@ -54,11 +54,11 @@ export default function FiscalTab({ store, limits, onNotify }: FiscalTabProps) {
     onNotify("Configurações fiscais salvas.")
   }
 
-  function toggle(next: boolean) {
+  async function toggle(next: boolean) {
     if (next) {
       if (!ready) return
       // RN09: ao ligar a NFC-e, produto ativo sem NCM/CFOP é inativado automaticamente.
-      for (const product of toFix) setProductActive(product.id, false)
+      for (const product of toFix) await setProductActive(product.id, false)
       updateStore(store.id, { name: store.name, cnpj: store.cnpj, phone: store.phone, city: store.city, state: store.state, nfceEnabled: true })
       onNotify(toFix.length > 0 ? `NFC-e ligada. ${toFix.length} produto(s) sem NCM/CFOP foram inativados.` : "NFC-e ligada.")
     } else {

@@ -44,7 +44,7 @@ const quantityTone = (product: Product) => {
 }
 
 export default function Stock() {
-  const { products, movements, categories, setProductActive } = useInventory()
+  const { products, movements, categories, setProductActive, isLoading, error, reload } = useInventory()
   const { nfceOn: nfceEnabled } = usePlan()
 
   const [category, setCategory] = useState("Todos")
@@ -80,9 +80,9 @@ export default function Stock() {
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
   }, [products, category, onlyCritical, query])
 
-  function confirmRemove() {
+  async function confirmRemove() {
     if (!removing) return
-    const result = setProductActive(removing.id, false)
+    const result = await setProductActive(removing.id, false)
     setToast(
       result.ok
         ? { title: "Produto excluído", message: `${removing.name} foi inativado e mantido no histórico.`, tone: "info" }
@@ -109,6 +109,13 @@ export default function Stock() {
           </>
         }
       />
+
+      {error && (
+        <div className="mt-8">
+          <AlertBanner title="Não foi possível carregar o estoque" description={error} actionLabel="Tentar de novo" onAction={() => void reload()} />
+        </div>
+      )}
+      {isLoading && <p className="mt-8 text-sm text-[var(--color-slate)]">Carregando estoque... A primeira abertura pode levar até 1 minuto se o servidor estava parado.</p>}
 
       {(critical.length > 0 || fiscalLocked.length > 0) && (
         <div className="mt-8 flex flex-col gap-3">

@@ -85,9 +85,9 @@ export default function Sales() {
     saveShifts(shifts.map((item) => (item.id === shift.id ? closed : item)), "Caixa fechado")
   }
 
-  function confirmCancel() {
+  async function confirmCancel() {
     if (!canceling) return
-    const result = cancelSale(canceling.id)
+    const result = await cancelSale(canceling.id)
     if (!result.ok) return setCancelError(result.error)
     setToast({ title: "Venda cancelada", message: `${formatSaleNumber(canceling.number)} — os itens voltaram ao estoque.`, tone: "info" })
     setCanceling(null)

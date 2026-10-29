@@ -12,6 +12,7 @@ import { missingFiscal, validateProductForm, type ProductFormErrors, type RawPro
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
 import { usePlan } from "@/billing/plan"
+import { config } from "@/config"
 import { useStores } from "@/store/useStores"
 
 const mono = "font-[family-name:var(--font-mono)]"
@@ -67,12 +68,14 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
   const locked = nfceEnabled && missingFiscal({ ncm: form.ncm.replace(/\D/g, ""), cfop: form.cfop })
   const categoryOptions = categories.includes(form.category) || !form.category ? categories : [form.category, ...categories]
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     const { errors: found, input, fiscalLocked } = validateProductForm(form, products, {
       editingId: product?.id,
       sku: product?.sku,
       nfceEnabled,
+      // Na API o produto não precisa de categoria (o vínculo é opcional).
+      categoryOptional: config.useApi,
     })
     setErrors(found)
     if (!input) return
@@ -81,7 +84,7 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
     const becomesActive = Boolean(input.active) && !product?.active
     if (limits.maxProducts !== null && becomesActive && activeCount >= limits.maxProducts)
       return setFormError(`O plano Free permite até ${limits.maxProducts} produtos ativos. Inative um produto ou assine o Premium.`)
-    const result = product ? updateProduct(product.id, input) : createProduct({ ...input, stock: 0 })
+    const result = await (product ? updateProduct(product.id, input) : createProduct({ ...input, stock: 0 }))
     if (!result.ok) return setFormError(result.error)
     onSaved(
       fiscalLocked
@@ -110,7 +113,8 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
           </Field>
           <Field id="unit" label="Tipo de medida" error={errors.unit}>
             <Select id="unit" value={form.unit} onChange={set("unit")} {...aria("unit")}>
-              {unitOptions.map((option) => (
+              {/* A API só tem unidade e quilo; o litro existe apenas no modo demonstração. */}
+              {unitOptions.filter((option) => !config.useApi || option.value !== "LT").map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -119,7 +123,7 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
           </Field>
           <Field id="category" label="Categoria" error={errors.category}>
             <Select id="category" value={form.category} onChange={set("category")} {...aria("category")}>
-              {categoryOptions.length === 0 && <option value="">Cadastre uma categoria</option>}
+              {(categoryOptions.length === 0 || config.useApi) && <option value="">{config.useApi ? "Sem categoria" : "Cadastre uma categoria"}</option>}
               {categoryOptions.map((category) => (
                 <option key={category}>{category}</option>
               ))}
