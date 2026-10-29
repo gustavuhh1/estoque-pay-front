@@ -29,10 +29,10 @@ function summarize(sales: Sale[]): CustomerStats {
 /** Histórico e fidelidade de um cliente, calculados a partir das vendas concluídas com o CPF dele. */
 export function customerStats(customer: Customer, sales: Sale[]): CustomerStats {
   const cpf = digitsOf(customer.cpf)
-  return summarize(sales.filter((sale) => sale.status === "concluida" && sale.cpf === cpf))
+  return summarize(sales.filter((sale) => sale.status === "concluida" && (sale.customerId === customer.id || (cpf !== "" && sale.cpf === cpf))))
 }
 
 /** Vendas concluídas sem CPF ("Consumidor não identificado"). */
 export function walkInStats(sales: Sale[]): CustomerStats {
-  return summarize(sales.filter((sale) => sale.status === "concluida" && !sale.cpf))
+  return summarize(sales.filter((sale) => sale.status === "concluida" && !sale.cpf && !sale.customerId))
 }

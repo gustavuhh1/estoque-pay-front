@@ -2,6 +2,7 @@ import { Banknote, Check, Copy, CreditCard, LoaderCircle, Printer, QrCode, Shopp
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useAuth } from "@/auth/useAuth"
+import BuyerFields from "@/components/pdv/BuyerFields"
 import EspelhoReceipt from "@/components/pdv/EspelhoReceipt"
 import PdvReceipt from "@/components/pdv/PdvReceipt"
 import Field from "@/components/Field"
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { errorMessage } from "@/lib/api"
 import { formatBRL, formatReceiptNumber, parseMoneyToCents } from "@/lib/format"
 import { cents } from "@/lib/money"
+import { useBuyer } from "@/pdv/useBuyer"
 import { fetchNota, manualToSale, payManual, pixStatus, pixToSale, simulatePix, startPix, cancelSaleApi, type Espelho, type PixPayment } from "@/pdv/pdvApi"
 import type { PaymentMethod, Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -188,11 +190,15 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
 
+  const buyer = useBuyer(totalCents)
+  const payableCents = totalCents - buyer.discountCents
   const receivedCents = received.trim() ? parseMoneyToCents(received) : null
-  const changeCents = Math.max(0, (receivedCents ?? 0) - totalCents)
+  const changeCents = Math.max(0, (receivedCents ?? 0) - payableCents)
 
   /** Venda confirmada pela API: recarrega estoque e histórico e busca o espelho da NFC-e, se a loja emite. */
-  async function conclude(sale: Sale) {
+  async function conclude(paid: Sale) {
+    // O cliente anexado aparece no comprovante; a API já guardou o vínculo.
+    const sale: Sale = buyer.customer ? { ...paid, customerName: buyer.customer.name, cpf: buyer.customer.cpf.replace(/D/g, "") } : paid
     await reload()
     let espelho: Espelho | null = null
     if (nfceOn) {
@@ -207,17 +213,19 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
 
   async function confirm() {
     setError("")
-    if (method === "dinheiro" && received.trim() && (receivedCents === null || receivedCents < totalCents)) {
+    if (buyer.couponError) return setError(buyer.couponError)
+    if (method === "dinheiro" && received.trim() && (receivedCents === null || receivedCents < payableCents)) {
       return setError("O valor recebido precisa ser igual ou maior que o total.")
     }
+    const who = { customerId: buyer.customerId, couponCode: buyer.couponCode }
     setBusy(true)
     try {
       if (method === "pix") {
-        const pix = await startPix(cart)
+        const pix = await startPix(cart, who)
         setPhase({ kind: "pix", pix })
         return
       }
-      const payment = await payManual(cart, method === "dinheiro" ? "DINHEIRO" : cardKind, method === "dinheiro" ? (receivedCents ?? totalCents) / 100 : undefined)
+      const payment = await payManual(cart, method === "dinheiro" ? "DINHEIRO" : cardKind, method === "dinheiro" ? (receivedCents ?? payableCents) / 100 : undefined, who)
       await conclude(manualToSale(payment, operator, nfceOn))
     } catch (failure) {
       setError(errorMessage(failure))
@@ -332,13 +340,19 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
                 <dt className="text-[var(--color-slate)]">Itens</dt>
                 <dd className="font-bold tabular-nums">{formatBRL(totalCents)}</dd>
               </div>
+              {buyer.discountCents > 0 && (
+                <div className="flex justify-between py-2">
+                  <dt className="text-[var(--color-slate)]">Desconto do cupom</dt>
+                  <dd className="font-bold tabular-nums">−{formatBRL(buyer.discountCents)}</dd>
+                </div>
+              )}
               <div className="flex justify-between py-2">
                 <dt className="text-[var(--color-slate)]">Taxa do Pix (paga pelo cliente)</dt>
                 <dd className="font-bold tabular-nums">{formatBRL(PIX_FEE_CENTS)}</dd>
               </div>
               <div className="flex justify-between py-2">
                 <dt className="font-bold">Total a cobrar</dt>
-                <dd className="font-extrabold tabular-nums text-[var(--color-amber)]">{formatBRL(totalCents + PIX_FEE_CENTS)}</dd>
+                <dd className="font-extrabold tabular-nums text-[var(--color-amber)]">{formatBRL(payableCents + PIX_FEE_CENTS)}</dd>
               </div>
             </dl>
           </div>
@@ -385,6 +399,8 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
             Passe o cartão na maquininha e confirme aqui para dar baixa no estoque.
           </div>
         )}
+
+        <BuyerFields buyer={buyer} />
 
         {error && (
           <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">

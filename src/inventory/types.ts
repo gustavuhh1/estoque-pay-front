@@ -70,6 +70,8 @@ export type Sale = {
   /** Apenas dígitos. Ausente quando o consumidor não foi identificado. */
   cpf?: string
   customerName?: string
+  /** Cliente cadastrado a que a venda foi atribuída (só com a API). */
+  customerId?: string
   /** Pagamento em dinheiro: valor entregue pelo cliente e troco devolvido. */
   receivedCents?: number
   changeCents?: number

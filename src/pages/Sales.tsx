@@ -14,7 +14,7 @@ import { Toast, type ToastTone } from "@/components/ui/toast"
 import { shiftTotals } from "@/caixa/caixa"
 import { useCash } from "@/caixa/useCash"
 import { downloadCsv } from "@/lib/download"
-import { formatBRL, formatDateTime, formatSaleNumber, normalizeText } from "@/lib/format"
+import { formatBRL, formatDateTime, normalizeText, saleLabel } from "@/lib/format"
 import { PAYMENT_LABELS, type Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
 import { useStores } from "@/store/useStores"
@@ -32,7 +32,6 @@ const chip = (active: boolean) =>
 const pill = "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em]"
 
 /** Número da venda no modo demonstração, ou o código curto da venda vinda da API. */
-const saleLabel = (sale: Sale) => sale.code ?? formatSaleNumber(sale.number)
 
 const timeFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 

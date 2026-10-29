@@ -4,11 +4,11 @@ import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import type { Customer } from "@/customers/customers"
+import type { Customer, CustomerData } from "@/customers/customers"
 import { isValidCpf } from "@/lib/cpf"
 import { digitsOf, formatBirthDate, maskCpf, maskDate, maskPhone, parseBirthDate } from "@/lib/format"
 
-export type CustomerData = Pick<Customer, "name" | "cpf" | "phone" | "email" | "birthDate" | "notes">
+export type { CustomerData }
 
 type Errors = Partial<Record<"cpf" | "name" | "phone" | "birth", string>>
 
@@ -19,7 +19,9 @@ type CustomerDialogProps = {
   customer: Customer | null
   /** Clientes da loja, para impedir CPF repetido. */
   customers: Customer[]
-  onSave: (data: CustomerData) => boolean
+  /** Salva o cadastro. Devolve a mensagem de erro, ou null quando salvou. */
+  onSave: (data: CustomerData) => Promise<string | null>
+  /** Ausente quando a loja não pode remover clientes (API). */
   onDelete?: () => void
   onClose: () => void
   /** Plano Free: só CPF e nome. */
@@ -34,10 +36,11 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
   const [notes, setNotes] = useState(customer?.notes ?? "")
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState("")
+  const [busy, setBusy] = useState(false)
 
   const aria = (key: keyof Errors) => ({ "aria-invalid": Boolean(errors[key]), "aria-describedby": errors[key] ? `customer-${key}-msg` : undefined })
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     const found: Errors = {}
     if (!isValidCpf(cpf)) found.cpf = "Informe um CPF válido."
@@ -48,7 +51,9 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
     if (!restricted && birth.trim() && !birthDate) found.birth = "Use uma data válida no formato 00/00/0000."
     setErrors(found)
     if (Object.keys(found).length > 0) return
-    const saved = onSave({
+    setBusy(true)
+    setFormError("")
+    const failure = await onSave({
       cpf: maskCpf(cpf),
       name: name.trim(),
       phone: restricted ? (customer?.phone ?? "") : phone.trim(),
@@ -56,7 +61,8 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
       birthDate: birthDate ?? undefined,
       notes: restricted ? customer?.notes : notes.trim() || undefined,
     })
-    if (!saved) setFormError("Não foi possível salvar os dados neste navegador.")
+    setBusy(false)
+    if (failure) setFormError(failure)
   }
 
   return (
@@ -108,7 +114,7 @@ export default function CustomerDialog({ customer, customers, onSave, onDelete, 
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="accent">
+            <Button type="submit" variant="accent" disabled={busy}>
               {customer ? "Salvar" : "Cadastrar"}
             </Button>
           </div>

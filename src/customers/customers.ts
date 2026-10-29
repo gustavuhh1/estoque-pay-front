@@ -10,7 +10,12 @@ export type Customer = {
   birthDate?: string
   notes?: string
   createdAt: number
+  /** Pontos de fidelidade (só vêm da API; no modo demonstração são calculados das vendas). */
+  points?: number
 }
+
+/** Campos editáveis no cadastro de cliente. */
+export type CustomerData = Pick<Customer, "name" | "cpf" | "phone" | "email" | "birthDate" | "notes">
 
 const key = (storeId: string) => `estoquepay.demo.customers.${storeId}`
 

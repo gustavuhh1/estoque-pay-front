@@ -1,11 +1,18 @@
 import { DEMO_STORE_IDS } from "@/customers/demo"
+import { formatBRL } from "@/lib/format"
 
-/** Cupom de desconto percentual emitido para um cliente. Uso único. */
+/** Cupom de desconto emitido para um cliente. Uso único. Percentual no modo demonstração, valor fixo com a API. */
 export type Coupon = {
   id: string
   code: string
   customerId: string
   percent: number
+  /** Desconto de valor fixo, em centavos (cupons da API; `percent` fica 0). */
+  valueCents?: number
+  /** Validade, quando o cupom expira. */
+  expiresAt?: number
+  /** Passou da validade sem ser usado. */
+  expired?: boolean
   createdAt: number
   redeemedAt?: number
   /** Número da venda em que foi resgatado. */
@@ -45,7 +52,10 @@ export function writeCoupons(storeId: string, coupons: Coupon[]) {
   }
 }
 
-export const isActive = (coupon: Coupon) => coupon.redeemedAt === undefined
+export const isActive = (coupon: Coupon) => coupon.redeemedAt === undefined && !coupon.expired
+
+/** Texto do desconto: "10%" ou "R$ 5,00". */
+export const couponDiscountLabel = (coupon: Coupon) => (coupon.valueCents !== undefined ? formatBRL(coupon.valueCents) : `${coupon.percent}%`)
 
 /** Código legível, sem caracteres ambíguos (0/O, 1/I), único entre os cupons existentes. */
 export function newCouponCode(existing: Coupon[]) {

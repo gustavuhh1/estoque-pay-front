@@ -1,4 +1,4 @@
-import type { Product } from "@/inventory/types"
+import type { Product, Sale } from "@/inventory/types"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -142,3 +142,6 @@ export function maskCnpj(value: string) {
   if (d.length > 12) out += "-" + d.slice(12, 14)
   return out
 }
+
+/** Identificação da venda nas telas: código curto (API) ou número sequencial (demonstração). */
+export const saleLabel = (sale: Sale) => sale.code ?? formatSaleNumber(sale.number)

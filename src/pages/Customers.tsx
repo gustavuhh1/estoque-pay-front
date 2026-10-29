@@ -1,5 +1,5 @@
 import { Pencil, Search, ShoppingBag, Ticket, UserPlus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import Avatar from "@/components/Avatar"
 import CouponDialog from "@/components/customers/CouponDialog"
@@ -10,10 +10,13 @@ import { Card } from "@/components/ui/card"
 import { Dialog } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Toast, type ToastTone } from "@/components/ui/toast"
-import { isActive, newCouponCode, readCoupons, writeCoupons, type Coupon } from "@/customers/coupons"
-import { readCustomers, writeCustomers, type Customer } from "@/customers/customers"
-import { customerStats, walkInStats } from "@/customers/metrics"
-import { digitsOf, formatBRL, formatBirthDate, formatDateTime, formatSaleNumber, normalizeText } from "@/lib/format"
+import { config } from "@/config"
+import { couponDiscountLabel, isActive } from "@/customers/coupons"
+import type { Customer } from "@/customers/customers"
+import { fetchCustomerDetails } from "@/customers/customersApi"
+import { customerStats, walkInStats, type CustomerStats } from "@/customers/metrics"
+import { useCustomers } from "@/customers/useCustomers"
+import { digitsOf, formatBRL, formatBirthDate, formatDateTime, normalizeText, saleLabel } from "@/lib/format"
 import { usePlan } from "@/billing/plan"
 import { useInventory } from "@/inventory/useInventory"
 import { useStores } from "@/store/useStores"
@@ -42,9 +45,10 @@ function Badge({ active, children }: { active: boolean; children: string }) {
 function CustomerManager({ storeId }: { storeId: string }) {
   const { sales } = useInventory()
   const { limits } = usePlan()
-  const [customers, setCustomers] = useState(() => readCustomers(storeId))
-  const [coupons, setCoupons] = useState(() => readCoupons(storeId))
-  const [selectedId, setSelectedId] = useState<string>(() => readCustomers(storeId)[0]?.id ?? WALK_IN)
+  const { customers, coupons, isLoading, error, canRemove, save: saveCustomer, remove: removeCustomer, issue } = useCustomers(storeId)
+  const [pickedId, setSelectedId] = useState<string | null>(null)
+  // Sem escolha do usuário, abre no primeiro cliente (que só chega depois da API).
+  const selectedId = pickedId ?? customers[0]?.id ?? WALK_IN
   const [query, setQuery] = useState("")
   const [editing, setEditing] = useState<Customer | "new" | null>(null)
   const [issuing, setIssuing] = useState(false)
@@ -64,39 +68,42 @@ function CustomerManager({ storeId }: { storeId: string }) {
 
   const selected = customers.find((customer) => customer.id === selectedId) ?? null
   const isWalkIn = selectedId === WALK_IN || !selected
-  const stats = selected ? statsById.get(selected.id)! : walkIn
 
-  function save(data: CustomerData) {
+  // Com a API o painel usa as estatísticas exatas do cliente (todas as vendas); a lista usa as últimas vendas carregadas.
+  const [details, setDetails] = useState<{ id: string; stats: CustomerStats } | null>(null)
+  useEffect(() => {
+    if (!config.useApi || !selected) return
+    let cancelled = false
+    fetchCustomerDetails(selected).then(
+      (loaded) => {
+        if (!cancelled) setDetails({ id: selected.id, stats: loaded })
+      },
+      () => undefined, // sem detalhe da API, o painel mostra o que a lista já calculou
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [selected])
+  const stats = selected ? (details?.id === selected.id ? details.stats : statsById.get(selected.id)!) : walkIn
+
+  async function save(data: CustomerData) {
     const isNew = editing === "new"
-    const target = isNew ? null : (editing as Customer)
-    const next = isNew
-      ? [...customers, { ...data, id: `cus-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, createdAt: Date.now() }]
-      : customers.map((customer) => (customer.id === target?.id ? { ...customer, ...data } : customer))
-    if (!writeCustomers(storeId, next)) return false
-    setCustomers(next)
-    if (isNew) setSelectedId(next[next.length - 1].id)
+    const result = await saveCustomer(isNew ? null : (editing as Customer).id, data, !limits.crmFull)
+    if (!result.ok) return result.error
+    if (isNew) setSelectedId(result.value.id)
     setToast({ title: isNew ? "Cliente cadastrado." : "Dados do cliente atualizados.", tone: "success" })
     setEditing(null)
-    return true
+    return null
   }
 
-  function remove() {
+  async function remove() {
     if (!deleting) return
-    const next = customers.filter((customer) => customer.id !== deleting.id)
-    if (!writeCustomers(storeId, next)) return setToast({ title: "Não foi possível remover o cliente.", tone: "error" })
-    setCustomers(next)
-    if (selectedId === deleting.id) setSelectedId(next[0]?.id ?? WALK_IN)
+    const result = await removeCustomer(deleting.id)
+    if (!result.ok) return setToast({ title: result.error, tone: "error" })
+    if (selectedId === deleting.id) setSelectedId(null)
     setDeleting(null)
     setEditing(null)
     setToast({ title: "Cliente removido. O histórico de vendas foi mantido.", tone: "info" })
-  }
-
-  function issue(customerId: string, percent: number) {
-    const coupon: Coupon = { id: `cup-${Date.now().toString(36)}`, code: newCouponCode(coupons), customerId, percent, createdAt: Date.now() }
-    const next = [...coupons, coupon]
-    if (!writeCoupons(storeId, next)) return null
-    setCoupons(next)
-    return coupon
   }
 
   return (
@@ -195,7 +202,13 @@ function CustomerManager({ storeId }: { storeId: string }) {
             </TableBody>
           </Table>
           {query && visible.length === 0 && <p className="px-6 py-10 text-center text-sm font-semibold">Nenhum cliente encontrado.</p>}
-          {customers.length === 0 && !query && (
+          {error && (
+            <p role="alert" className="mx-2 mb-3 rounded-xl bg-[var(--color-alert-soft)] px-3.5 py-2.5 text-sm font-medium text-[var(--color-alert-dark)]">
+              {error}
+            </p>
+          )}
+          {isLoading && <p className="px-6 pb-4 pt-6 text-center text-sm text-[var(--color-slate)]">Carregando clientes...</p>}
+          {customers.length === 0 && !query && !isLoading && !error && (
             <p className="px-6 pb-4 pt-6 text-center text-sm text-[var(--color-slate)]">Nenhum cliente cadastrado ainda. Toque em "Novo cliente" para começar.</p>
           )}
         </Card>
@@ -267,7 +280,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
               <ul className="mt-3 flex flex-wrap gap-2">
                 {activeCoupons(selected.id).map((coupon) => (
                   <li key={coupon.id} className={`rounded-lg border border-dashed border-[var(--color-green-500)] px-3 py-1.5 text-sm font-bold ${mono}`}>
-                    {coupon.code} · {coupon.percent}%
+                    {coupon.code} · {couponDiscountLabel(coupon)}
                   </li>
                 ))}
               </ul>
@@ -281,7 +294,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
                 {stats.recent.map((sale) => (
                   <li key={sale.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                     <span className="min-w-0">
-                      <strong className={mono}>{formatSaleNumber(sale.number)}</strong>
+                      <strong className={mono}>{saleLabel(sale)}</strong>
                       <span className="ml-2 text-[var(--color-slate)]">{formatDateTime(sale.createdAt)}</span>
                     </span>
                     <strong className="tabular-nums">{formatBRL(sale.totalCents)}</strong>
@@ -298,7 +311,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
           customer={editing === "new" ? null : editing}
           customers={customers}
           onSave={save}
-          onDelete={editing === "new" ? undefined : () => setDeleting(editing)}
+          onDelete={editing === "new" || !canRemove ? undefined : () => setDeleting(editing)}
           restricted={!limits.crmFull}
           onClose={() => setEditing(null)}
         />
