@@ -75,6 +75,8 @@ export type Sale = {
   /** Desconto de cupom aplicado sobre o subtotal dos itens. */
   discountCents?: number
   couponCode?: string
+  /** Quem registrou a venda (operador do caixa). */
+  operator?: string
 }
 
 export type MovementType = "entrada" | "saida" | "ajuste" | "venda" | "cancelamento"
@@ -114,6 +116,7 @@ export type SaleInput = {
   receivedCents?: number
   discountCents?: number
   couponCode?: string
+  operator?: string
 }
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string }

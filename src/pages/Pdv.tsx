@@ -1,6 +1,8 @@
 import { Bell, Check, Clock, LayoutGrid, List, Minus, Package, Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { Link } from "react-router-dom"
+
 import { useAuth } from "@/auth/useAuth"
 import PdvCheckout from "@/components/pdv/PdvCheckout"
 import PdvHelp from "@/components/pdv/PdvHelp"
@@ -9,6 +11,7 @@ import { formatBRL, formatQuantity, normalizeText } from "@/lib/format"
 import { lineTotalCents, roundQty } from "@/inventory/logic"
 import { isFractionalUnit, type Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import { openShift, readShifts } from "@/caixa/caixa"
 import { useStores } from "@/store/useStores"
 
 type CartLine = { productId: string; quantity: number }
@@ -72,6 +75,8 @@ export default function Pdv() {
   const [cart, setCart] = useState<CartLine[]>([])
   const [message, setMessage] = useState("")
   const [paying, setPaying] = useState(false)
+  // O PDV só vende com o caixa (turno) aberto; a abertura fica na tela de Vendas.
+  const [cashOpen] = useState(() => Boolean(openShift(readShifts(activeStore.id))))
   const [helpOpen, setHelpOpen] = useState(false)
 
   const active = useMemo(() => products.filter((product) => product.active), [products])
@@ -213,6 +218,14 @@ export default function Pdv() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-7 pt-5 lg:px-10">
+            {!cashOpen && (
+              <p role="alert" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm font-medium text-[var(--color-warn)]">
+                Caixa fechado: abra o caixa para registrar vendas.
+                <Link to="/vendas" className="font-bold underline">
+                  Ir para Vendas
+                </Link>
+              </p>
+            )}
             {message && (
               <p role="alert" className="mb-4 rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
                 {message}
@@ -354,7 +367,7 @@ export default function Pdv() {
               <span className={`${label} text-[var(--color-ink)]`}>Total</span>
               <strong className="text-[38px] font-extrabold tracking-[-0.03em] text-[var(--color-amber)]">{formatBRL(total)}</strong>
             </div>
-            <Button variant="accent" size="lg" className="w-full uppercase tracking-[0.08em]" disabled={cart.length === 0} onClick={() => setPaying(true)}>
+            <Button variant="accent" size="lg" className="w-full uppercase tracking-[0.08em]" disabled={cart.length === 0 || !cashOpen} onClick={() => setPaying(true)}>
               <Check className="h-4 w-4" />
               Cobrar
             </Button>
