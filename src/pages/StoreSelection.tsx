@@ -49,7 +49,7 @@ export default function StoreSelection() {
                   <p className="mt-2 text-xs text-[var(--color-slate)]">{store.cnpj}</p>
                   <div className="mt-5 space-y-2 text-xs text-[var(--color-slate)]">
                     <div className="flex items-center gap-2"><Building2 className="h-3.5 w-3.5" />{store.role}</div>
-                    <div>{store.city} / {store.state}</div>
+                    {store.city && <div>{store.city} / {store.state}</div>}
                   </div>
                   <div className="mt-6 flex items-center justify-between border-t border-[var(--color-border)] pt-5 text-xs font-semibold text-[var(--color-ink)]">
                     <span>Abrir Dashboard</span><ArrowRight className="h-4 w-4" />

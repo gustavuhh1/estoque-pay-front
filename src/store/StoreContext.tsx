@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 
+import { config } from "@/config"
+import { ApiStoreProvider } from "@/store/ApiStoreContext"
 import { StoreContext, type CreateStoreInput, type Store } from "@/store/store-context"
 
 const STORAGE_KEY = "estoquepay.demo.stores"
@@ -60,7 +62,8 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "")
 }
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+/** Lojas de demonstração em localStorage (modo sem API). */
+function DemoStoreProvider({ children }: { children: ReactNode }) {
   const [stores, setStores] = useState<Store[]>(() => readStores())
   const [activeStoreId, setActiveStoreId] = useState(() => readActiveId(stores))
 
@@ -87,26 +90,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const created: Store = { ...input, id, role: "Owner" }
     setStores((current) => [...current, created])
     setActiveStoreId(created.id)
-    return created
+    return Promise.resolve(created)
   }, [])
 
   const updateStore = useCallback((storeId: string, input: CreateStoreInput) => {
     setStores((current) =>
       current.map((store) => (store.id === storeId ? { ...store, ...input } : store)),
     )
+    return Promise.resolve()
   }, [])
+  const reload = useCallback(() => Promise.resolve(), [])
 
   const value = useMemo(
     () => ({
       stores,
       activeStore,
       activeStoreId,
+      isLoading: false,
+      loadError: null,
+      reload,
       setActiveStore,
       createStore,
       updateStore,
     }),
-    [activeStore, activeStoreId, createStore, setActiveStore, stores, updateStore],
+    [activeStore, activeStoreId, createStore, reload, setActiveStore, stores, updateStore],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
+}
+
+/** Com a API configurada usa as lojas reais; sem ela, as de demonstração. */
+export function StoreProvider({ children }: { children: ReactNode }) {
+  return config.useApi ? <ApiStoreProvider>{children}</ApiStoreProvider> : <DemoStoreProvider>{children}</DemoStoreProvider>
 }
