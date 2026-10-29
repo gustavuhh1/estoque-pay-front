@@ -8,14 +8,16 @@ type DialogProps = {
   title: string
   description?: string
   children: React.ReactNode
+  /** Largura máxima do modal (classe Tailwind). Padrão: max-w-lg. */
+  widthClass?: string
 }
 
-export function Dialog({ open, onClose, title, description, children }: DialogProps) {
+export function Dialog({ open, onClose, title, description, children, widthClass = "max-w-lg" }: DialogProps) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <button aria-label="Fechar modal" type="button" className="absolute inset-0 bg-[var(--color-ink)]/35 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-labelledby="dialog-title" className="relative z-10 w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_24px_70px_rgba(13,28,46,0.18)] sm:p-7">
+      <div role="dialog" aria-modal="true" aria-labelledby="dialog-title" className={cn("relative z-10 max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_24px_70px_rgba(13,28,46,0.18)] sm:p-7", widthClass)}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="dialog-title" className="font-[family-name:var(--font-display)] text-xl font-semibold">{title}</h2>

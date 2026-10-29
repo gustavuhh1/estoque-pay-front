@@ -1,6 +1,6 @@
 import { parseMoneyToCents, parseWholeNumber } from "@/lib/format"
 import {
-  CATEGORIES,
+  isFractionalUnit,
   type Category,
   type Movement,
   type MoveInput,
@@ -10,9 +10,16 @@ import {
   type Sale,
   type SaleInput,
   type StoreInventory,
+  type Unit,
 } from "@/inventory/types"
 
 export const EMPTY_INVENTORY: StoreInventory = { products: [], sales: [], movements: [] }
+
+/** Arredonda para 3 casas (milésimos), a precisão das quantidades fracionadas. */
+export const roundQty = (value: number) => Math.round(value * 1000) / 1000
+
+/** Total de uma linha de venda em centavos (a quantidade pode ser fracionada). */
+export const lineTotalCents = (unitCents: number, quantity: number) => Math.round(unitCents * quantity)
 
 export type Outcome<T> = { ok: true; inventory: StoreInventory; value: T } | { ok: false; error: string }
 const fail = (error: string) => ({ ok: false as const, error })
@@ -52,6 +59,9 @@ export type ProductFormErrors = Partial<Record<keyof RawProductForm, string>>
 const MAX_CENTS = 100_000_000
 const MAX_UNITS = 1_000_000
 
+/** Quantidade válida: finita, entre 0 e o limite, com no máximo 3 casas decimais. */
+const isQuantity = (value: number) => Number.isFinite(value) && value >= 0 && value <= MAX_UNITS && roundQty(value) === value
+
 export function validateProductForm(
   raw: RawProductForm,
   products: Product[],
@@ -68,7 +78,7 @@ export function validateProductForm(
   else if (products.some((product) => product.sku === sku && product.id !== options.editingId))
     errors.sku = "Já existe um produto com este SKU."
 
-  if (!CATEGORIES.includes(raw.category as Category)) errors.category = "Escolha uma categoria."
+  if (!raw.category.trim()) errors.category = "Escolha uma categoria."
 
   const priceCents = parseMoneyToCents(raw.price)
   if (priceCents === null) errors.price = "Informe um preço válido (ex.: 129,90)."
@@ -92,7 +102,7 @@ export function validateProductForm(
   if (Object.keys(errors).length > 0) return { errors, input: null }
   return {
     errors,
-    input: { name, sku, category: raw.category as Category, priceCents: priceCents!, costCents: costCents!, minStock: minStock!, stock },
+    input: { name, sku, category: raw.category.trim(), priceCents: priceCents!, costCents: costCents!, minStock: minStock!, stock },
   }
 }
 
@@ -113,7 +123,8 @@ function movement(product: Product, type: Movement["type"], delta: number, reaso
 
 export function createProduct(inv: StoreInventory, input: ProductInput, at = Date.now()): Outcome<Product> {
   if (inv.products.some((product) => product.sku === input.sku)) return fail("Já existe um produto com este SKU.")
-  const product: Product = { id: uid(), ...input, active: true, createdAt: at }
+  const { ean = "", unit = "UN", ncm = "", cfop = "", ...rest } = input
+  const product: Product = { id: uid(), ...rest, ean, unit, ncm, cfop, active: true, createdAt: at }
   const movements = input.stock > 0 ? [movement(product, "entrada", input.stock, "Estoque inicial", at), ...inv.movements] : inv.movements
   return { ok: true, inventory: { ...inv, products: [...inv.products, product], movements }, value: product }
 }
@@ -122,7 +133,15 @@ export function updateProduct(inv: StoreInventory, id: string, input: Omit<Produ
   const current = inv.products.find((product) => product.id === id)
   if (!current) return fail("Produto não encontrado.")
   if (inv.products.some((product) => product.sku === input.sku && product.id !== id)) return fail("Já existe um produto com este SKU.")
-  const updated: Product = { ...current, ...input }
+  const { ean, unit, ncm, cfop, ...rest } = input
+  const updated: Product = {
+    ...current,
+    ...rest,
+    ean: ean ?? current.ean,
+    unit: unit ?? current.unit,
+    ncm: ncm ?? current.ncm,
+    cfop: cfop ?? current.cfop,
+  }
   return { ok: true, inventory: { ...inv, products: inv.products.map((p) => (p.id === id ? updated : p)) }, value: updated }
 }
 
@@ -137,7 +156,8 @@ export function moveStock(inv: StoreInventory, input: MoveInput, at = Date.now()
   const product = inv.products.find((item) => item.id === input.productId)
   if (!product) return fail("Selecione um produto.")
   const { quantity, type } = input
-  if (!Number.isInteger(quantity) || quantity < 0 || quantity > MAX_UNITS) return fail("Informe uma quantidade inteira válida.")
+  if (!isQuantity(quantity)) return fail("Informe uma quantidade válida (até 3 casas decimais).")
+  if (!isFractionalUnit(product.unit) && !Number.isInteger(quantity)) return fail("Este produto é vendido por unidade: use um número inteiro.")
 
   let delta: number
   if (type === "entrada") {
@@ -148,14 +168,14 @@ export function moveStock(inv: StoreInventory, input: MoveInput, at = Date.now()
     if (quantity > product.stock) return fail(`Saída maior que o estoque disponível (${product.stock}).`)
     delta = -quantity
   } else {
-    delta = quantity - product.stock
+    delta = roundQty(quantity - product.stock)
     if (delta === 0) return fail("A contagem é igual ao estoque atual.")
   }
 
   const reason = input.reason.trim() || (type === "entrada" ? "Entrada de mercadoria" : "")
   if (!reason) return fail("Informe o motivo da movimentação.")
 
-  const updated = { ...product, stock: product.stock + delta }
+  const updated = { ...product, stock: roundQty(product.stock + delta) }
   const entry = movement(updated, type, delta, reason, at)
   return {
     ok: true,
@@ -171,8 +191,8 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
   // agrupa linhas repetidas do mesmo produto
   const wanted = new Map<string, number>()
   for (const line of input.items) {
-    if (!Number.isInteger(line.quantity) || line.quantity <= 0) return fail("Quantidade inválida na venda.")
-    wanted.set(line.productId, (wanted.get(line.productId) ?? 0) + line.quantity)
+    if (!isQuantity(line.quantity) || line.quantity <= 0) return fail("Quantidade inválida na venda.")
+    wanted.set(line.productId, roundQty((wanted.get(line.productId) ?? 0) + line.quantity))
   }
 
   const items: Sale["items"] = []
@@ -184,14 +204,23 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
     const product = products.find((p) => p.id === productId)
     if (!product || !product.active) return fail("Um dos produtos não está disponível para venda.")
     if (quantity > product.stock) return fail(`Estoque insuficiente para "${product.name}" (disponível: ${product.stock}).`)
-    const updated = { ...product, stock: product.stock - quantity }
+    if (!isFractionalUnit(product.unit) && !Number.isInteger(quantity)) return fail(`"${product.name}" é vendido por unidade: use um número inteiro.`)
+    const updated = { ...product, stock: roundQty(product.stock - quantity) }
     products = products.map((p) => (p.id === productId ? updated : p))
     movements = [movement(updated, "venda", -quantity, `Venda #${String(number).padStart(5, "0")}`, at), ...movements]
-    items.push({ productId, name: product.name, sku: product.sku, quantity, unitCents: product.priceCents })
+    items.push({ productId, name: product.name, sku: product.sku, unit: product.unit, quantity, unitCents: product.priceCents })
   }
 
-  const totalCents = items.reduce((sum, item) => sum + item.unitCents * item.quantity, 0)
+  const totalCents = items.reduce((sum, item) => sum + lineTotalCents(item.unitCents, item.quantity), 0)
   const sale: Sale = { id: uid(), number, createdAt: at, items, totalCents, payment: input.payment, status: "concluida" }
+  const cpf = input.cpf?.replace(/\D/g, "")
+  if (cpf) sale.cpf = cpf
+  if (input.customerName) sale.customerName = input.customerName
+  if (input.payment === "dinheiro" && input.receivedCents !== undefined) {
+    if (input.receivedCents < totalCents) return fail("O valor recebido é menor que o total da venda.")
+    sale.receivedCents = input.receivedCents
+    sale.changeCents = input.receivedCents - totalCents
+  }
   return { ok: true, inventory: { products, movements, sales: [sale, ...inv.sales] }, value: sale }
 }
 
@@ -205,7 +234,7 @@ export function cancelSale(inv: StoreInventory, saleId: string, at = Date.now())
   for (const item of sale.items) {
     const product = products.find((p) => p.id === item.productId)
     if (!product) continue
-    const updated = { ...product, stock: product.stock + item.quantity }
+    const updated = { ...product, stock: roundQty(product.stock + item.quantity) }
     products = products.map((p) => (p.id === product.id ? updated : p))
     movements = [
       movement(updated, "cancelamento", item.quantity, `Cancelamento da venda #${String(sale.number).padStart(5, "0")}`, at),
@@ -224,61 +253,42 @@ export function stockValueCents(products: Product[]) {
 // ---------- dados de demonstração (derivados pelas mesmas regras, então ficam coerentes) ----------
 const SEEDED_STORE_IDS = new Set(["ponto-certo", "centro", "shopping"])
 
-type SeedProduct = [sku: string, name: string, category: Category, price: number, cost: number, stock: number, min: number]
+type SeedProduct = {
+  sku: string
+  ean: string
+  name: string
+  category: Category
+  unit: Unit
+  price: number
+  cost: number
+  /** Saldo atual (depois das vendas de demonstração). */
+  stock: number
+  min: number
+  ncm: string
+  cfop: string
+  image?: string
+  active?: boolean
+}
 const SEED_PRODUCTS: SeedProduct[] = [
-  ["CAM-007", "Camiseta Básica P", "Vestuário", 129.9, 58, 34, 10],
-  ["CAM-008", "Camiseta Básica M", "Vestuário", 129.9, 58, 22, 10],
-  ["CAL-011", "Calça Jeans 40", "Vestuário", 189.9, 92, 15, 8],
-  ["TEN-023", "Tênis Corrida 42", "Calçados", 349.9, 190, 3, 10],
-  ["TEN-031", "Tênis Casual 40", "Calçados", 279.9, 150, 0, 6],
-  ["SAN-005", "Sandália Conforto 37", "Calçados", 119.9, 55, 18, 6],
-  ["MOC-002", "Mochila Urbana", "Acessórios", 219.9, 110, 11, 5],
-  ["BON-004", "Boné Aba Curva", "Acessórios", 69.9, 28, 40, 12],
-  ["CAN-014", "Caneca Cerâmica", "Casa", 54.9, 21, 12, 15],
-  ["GAR-009", "Garrafa Térmica 500ml", "Casa", 99.9, 45, 26, 10],
-  ["CAD-019", "Caderno Executivo", "Papelaria", 39.9, 17, 8, 12],
-  ["PAP-003", "Caneta Gel (caixa com 12)", "Papelaria", 34.9, 15, 60, 20],
+  { sku: "CAF-BRB-001", ean: "7891000315507", name: "Café Bourbon Special", category: "Cafés", unit: "UN", price: 42.9, cost: 24.9, stock: 45, min: 10, ncm: "0901.21.00", cfop: "5102", image: "/produtos/cafe-bourbon.jpg" },
+  { sku: "AZE-EXT-012", ean: "7891000100224", name: "Azeite Extra Virgem", category: "Despensa", unit: "UN", price: 58, cost: 31, stock: 8, min: 12, ncm: "1509.10.00", cfop: "5102", image: "/produtos/azeite-extra-virgem.jpg" },
+  { sku: "CHO-AMR-70", ean: "7891000244418", name: "Chocolate Amargo 70%", category: "Chocolates", unit: "UN", price: 18.5, cost: 9.8, stock: 0, min: 6, ncm: "1806.32.10", cfop: "5102", image: "/produtos/chocolate-amargo.jpg" },
+  { sku: "LEI-ORG-A2", ean: "7891000530012", name: "Leite Orgânico A2", category: "Laticínios", unit: "LT", price: 9.9, cost: 5.4, stock: 12, min: 6, ncm: "0401.20.10", cfop: "5102", image: "/produtos/leite-organico.jpg" },
+  { sku: "QUE-MIN-500", ean: "", name: "Queijo Minas Curado", category: "Frios", unit: "KG", price: 69.9, cost: 38, stock: 4.35, min: 2, ncm: "0406.90.20", cfop: "5102", image: "/produtos/queijo-minas.jpg" },
+  { sku: "IOG-GRE-100", ean: "7891000612345", name: "Iogurte Grego Natural", category: "Laticínios", unit: "UN", price: 6.9, cost: 3.2, stock: 27, min: 10, ncm: "0403.20.00", cfop: "", image: "/produtos/iogurte-grego.jpg", active: false },
 ]
 
 // [minutos atrás, itens [sku, qtd][], pagamento, cancelada?]
 const SEED_SALES: [number, [string, number][], PaymentMethod, boolean?][] = [
-  [
-    27 * 60,
-    [
-      ["CAM-008", 2],
-      ["BON-004", 1],
-    ],
-    "cartao",
-  ],
-  [22 * 60, [["TEN-031", 3]], "pix"],
-  [9 * 60, [["GAR-009", 2]], "dinheiro"],
-  [
-    6 * 60,
-    [
-      ["TEN-023", 1],
-      ["MOC-002", 1],
-    ],
-    "cartao",
-  ],
-  [5 * 60, [["CAN-014", 3]], "pix"],
-  [3 * 60, [["CAM-007", 1]], "pix", true],
-  [
-    2 * 60,
-    [
-      ["CAD-019", 4],
-      ["PAP-003", 2],
-    ],
-    "dinheiro",
-  ],
-  [60, [["TEN-023", 1]], "cartao"],
-  [
-    25,
-    [
-      ["MOC-002", 1],
-      ["CAM-007", 1],
-    ],
-    "pix",
-  ],
+  [27 * 60, [["CAF-BRB-001", 2], ["LEI-ORG-A2", 3]], "cartao"],
+  [22 * 60, [["QUE-MIN-500", 0.35]], "pix"],
+  [9 * 60, [["AZE-EXT-012", 2]], "dinheiro"],
+  [6 * 60, [["CHO-AMR-70", 4], ["CAF-BRB-001", 1]], "cartao"],
+  [5 * 60, [["LEI-ORG-A2", 2]], "pix"],
+  [3 * 60, [["CAF-BRB-001", 1]], "pix", true],
+  [2 * 60, [["CHO-AMR-70", 2], ["AZE-EXT-012", 1]], "dinheiro"],
+  [60, [["QUE-MIN-500", 0.25]], "cartao"],
+  [25, [["CAF-BRB-001", 1], ["AZE-EXT-012", 1]], "pix"],
 ]
 
 export function seedFor(storeId: string, now = Date.now()): StoreInventory {
@@ -288,19 +298,24 @@ export function seedFor(storeId: string, now = Date.now()): StoreInventory {
   // O estoque inicial é "estoque atual + o que as vendas de demonstração consumiram",
   // e as vendas são registradas pelas funções reais: o histórico fecha com o saldo atual.
   const sold = new Map<string, number>()
-  for (const [, items, , canceled] of SEED_SALES) if (!canceled) for (const [sku, qty] of items) sold.set(sku, (sold.get(sku) ?? 0) + qty)
+  for (const [, items, , canceled] of SEED_SALES) if (!canceled) for (const [sku, qty] of items) sold.set(sku, roundQty((sold.get(sku) ?? 0) + qty))
 
   let inv: StoreInventory = {
-    products: SEED_PRODUCTS.map(([sku, name, category, price, cost, stock, min], index) => ({
-      id: `seed-${sku.toLowerCase()}`,
-      sku,
-      name,
-      category,
-      priceCents: Math.round(price * 100),
-      costCents: Math.round(cost * 100),
-      stock: stock + (sold.get(sku) ?? 0),
-      minStock: min,
-      active: true,
+    products: SEED_PRODUCTS.map((seed, index) => ({
+      id: `seed-${seed.sku.toLowerCase()}`,
+      sku: seed.sku,
+      ean: seed.ean,
+      name: seed.name,
+      category: seed.category,
+      unit: seed.unit,
+      priceCents: Math.round(seed.price * 100),
+      costCents: Math.round(seed.cost * 100),
+      ncm: seed.ncm,
+      cfop: seed.cfop,
+      image: seed.image,
+      stock: roundQty(seed.stock + (sold.get(seed.sku) ?? 0)),
+      minStock: seed.min,
+      active: seed.active ?? true,
       createdAt: now - (72 * 60 + index) * minute,
     })),
     sales: [],

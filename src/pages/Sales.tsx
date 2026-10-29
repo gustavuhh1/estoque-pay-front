@@ -1,8 +1,7 @@
-import { Ban, CircleDollarSign, Plus, Receipt, Search, ShoppingCart, Trash2 } from "lucide-react"
+import { Ban, CircleDollarSign, Plus, Receipt, Search, ShoppingCart } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-import { useLocation } from "react-router-dom"
+import { Link } from "react-router-dom"
 
-import Field from "@/components/Field"
 import PageHeader from "@/components/PageHeader"
 import StatCard from "@/components/StatCard"
 import { SaleBadge } from "@/components/StatusBadge"
@@ -13,170 +12,14 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Toast, type ToastTone } from "@/components/ui/toast"
-import { formatBRL, formatDateTime, formatSaleNumber, isSameDay, normalizeText, parseWholeNumber } from "@/lib/format"
-import { PAYMENT_LABELS, type PaymentMethod, type Sale } from "@/inventory/types"
+import { formatBRL, formatDateTime, formatQuantity, formatSaleNumber, isSameDay, normalizeText } from "@/lib/format"
+import { PAYMENT_LABELS, type Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
 
-type CartLine = { productId: string; quantity: number }
-
-function NewSaleForm({ onDone, onCancel }: { onDone: (sale: Sale) => void; onCancel: () => void }) {
-  const { products, registerSale } = useInventory()
-  const available = useMemo(() => products.filter((product) => product.active && product.stock > 0), [products])
-  const [productId, setProductId] = useState(available[0]?.id ?? "")
-  const [quantity, setQuantity] = useState("1")
-  const [cart, setCart] = useState<CartLine[]>([])
-  const [payment, setPayment] = useState<PaymentMethod>("pix")
-  const [error, setError] = useState("")
-
-  const byId = (id: string) => products.find((product) => product.id === id)
-  const total = cart.reduce((sum, line) => sum + (byId(line.productId)?.priceCents ?? 0) * line.quantity, 0)
-
-  function addToCart() {
-    const product = byId(productId)
-    const qty = parseWholeNumber(quantity)
-    if (!product) return setError("Selecione um produto.")
-    if (qty === null || qty <= 0) return setError("Informe uma quantidade inteira maior que zero.")
-    const inCart = cart.find((line) => line.productId === productId)?.quantity ?? 0
-    if (inCart + qty > product.stock) return setError(`Quantidade acima do estoque de "${product.name}" (disponível: ${product.stock}).`)
-    setError("")
-    setCart((current) =>
-      current.some((line) => line.productId === productId)
-        ? current.map((line) => (line.productId === productId ? { ...line, quantity: line.quantity + qty } : line))
-        : [...current, { productId, quantity: qty }],
-    )
-    setQuantity("1")
-  }
-
-  function finish() {
-    const result = registerSale({ items: cart, payment })
-    if (!result.ok) return setError(result.error)
-    onDone(result.value)
-  }
-
-  if (available.length === 0 && cart.length === 0) {
-    return (
-      <div>
-        <p className="rounded-xl bg-[var(--color-paper)] px-4 py-5 text-sm text-[var(--color-slate)]">
-          Nenhum produto ativo com estoque disponível. Cadastre produtos ou registre uma entrada de estoque para vender.
-        </p>
-        <div className="mt-5 flex justify-end">
-          <Button variant="outline" onClick={onCancel}>
-            Fechar
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-[1fr_110px_auto] sm:items-end">
-        <Field id="sale-product" label="Produto">
-          <Select
-            id="sale-product"
-            value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value)
-              setError("")
-            }}
-          >
-            {available.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name} — {formatBRL(product.priceCents)} ({product.stock} em estoque)
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field id="sale-quantity" label="Qtd.">
-          <Input
-            id="sale-quantity"
-            value={quantity}
-            onChange={(e) => {
-              setQuantity(e.target.value)
-              setError("")
-            }}
-            inputMode="numeric"
-          />
-        </Field>
-        <Button type="button" variant="outline" onClick={addToCart} disabled={available.length === 0}>
-          <Plus className="h-4 w-4" />
-          Adicionar
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
-        {cart.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-[var(--color-slate)]">Nenhum item adicionado à venda.</p>
-        ) : (
-          <ul className="divide-y divide-[var(--color-border)]" aria-label="Itens da venda">
-            {cart.map((line) => {
-              const product = byId(line.productId)
-              return (
-                <li key={line.productId} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{product?.name}</p>
-                    <p className="text-[11px] text-[var(--color-slate)]">
-                      {line.quantity} × {formatBRL(product?.priceCents ?? 0)}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold tabular-nums">{formatBRL((product?.priceCents ?? 0) * line.quantity)}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remover ${product?.name} da venda`}
-                    onClick={() => setCart((current) => current.filter((item) => item.productId !== line.productId))}
-                    className="rounded-lg p-2 text-[var(--color-slate)] transition hover:bg-[var(--color-alert-soft)] hover:text-[var(--color-alert-dark)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
-        <Field id="sale-payment" label="Forma de pagamento">
-          <Select id="sale-payment" value={payment} onChange={(e) => setPayment(e.target.value as PaymentMethod)}>
-            {(Object.keys(PAYMENT_LABELS) as PaymentMethod[]).map((method) => (
-              <option key={method} value={method}>
-                {PAYMENT_LABELS[method]}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <div className="rounded-xl bg-[var(--color-ink)] px-4 py-3 text-white">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">Total</p>
-          <p className="font-[family-name:var(--font-display)] text-2xl font-semibold tabular-nums" aria-live="polite">
-            {formatBRL(total)}
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
-          {error}
-        </p>
-      )}
-
-      <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="button" variant="accent" onClick={finish} disabled={cart.length === 0}>
-          Finalizar venda
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }) {
-  const location = useLocation()
+export default function Sales() {
   const { sales, products, cancelSale } = useInventory()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState("todas")
-  const [creating, setCreating] = useState(pointOfSale)
   const [canceling, setCanceling] = useState<Sale | null>(null)
   const [cancelError, setCancelError] = useState("")
   const [toast, setToast] = useState<{ title: string; message?: string; tone: ToastTone } | null>(null)
@@ -210,16 +53,14 @@ export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }
     <>
       <PageHeader
         eyebrow="Operação"
-        title={location.pathname === "/pdv" ? "PDV" : "Vendas"}
-        description={
-          location.pathname === "/pdv"
-            ? "Registre uma venda e atualize o estoque automaticamente."
-            : "Acompanhe o faturamento e o histórico de vendas. Cancele uma venda quando necessário."
-        }
+        title="Vendas"
+        description="Acompanhe o faturamento e o histórico de vendas. Cancele uma venda quando necessário."
         actions={
-          <Button variant="accent" onClick={() => setCreating(true)} disabled={products.length === 0}>
-            <Plus className="h-4 w-4" />
-            Nova venda
+          <Button asChild variant="accent">
+            <Link to="/pdv">
+              <Plus className="h-4 w-4" />
+              Nova venda
+            </Link>
           </Button>
         }
       />
@@ -266,7 +107,7 @@ export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }
             <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--color-slate)]">
               {products.length === 0
                 ? "Cadastre produtos antes de registrar a primeira venda."
-                : "Registre a primeira venda para ver o histórico aqui."}
+                : "Registre a primeira venda no PDV para ver o histórico aqui."}
             </p>
           </div>
         ) : filtered.length === 0 ? (
@@ -302,7 +143,9 @@ export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }
                       {sale.items[0].name}
                       {sale.items.length > 1 ? ` +${sale.items.length - 1}` : ""}
                     </p>
-                    <p className="text-[11px] text-[var(--color-slate)]">{sale.items.reduce((sum, item) => sum + item.quantity, 0)} un.</p>
+                    <p className="text-[11px] text-[var(--color-slate)]">
+                      {sale.items.map((item) => `${formatQuantity(item.quantity)} ${(item.unit ?? "UN").toLowerCase()}`).join(" · ")}
+                    </p>
                   </TableCell>
                   <TableCell>{PAYMENT_LABELS[sale.payment]}</TableCell>
                   <TableCell
@@ -335,27 +178,6 @@ export default function Sales({ pointOfSale = false }: { pointOfSale?: boolean }
           </Table>
         )}
       </Card>
-
-      <Dialog
-        open={creating}
-        onClose={() => setCreating(false)}
-        title="Nova venda"
-        description="Adicione os produtos, escolha o pagamento e finalize."
-      >
-        {creating && (
-          <NewSaleForm
-            onCancel={() => setCreating(false)}
-            onDone={(sale) => {
-              setCreating(false)
-              setToast({
-                title: "Venda registrada",
-                message: `${formatSaleNumber(sale.number)} — ${formatBRL(sale.totalCents)}`,
-                tone: "success",
-              })
-            }}
-          />
-        )}
-      </Dialog>
 
       <Dialog
         open={canceling !== null}

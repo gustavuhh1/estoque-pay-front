@@ -10,42 +10,13 @@ import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Toast } from "@/components/ui/toast"
+import { readCustomers, type Customer } from "@/customers/customers"
 import { normalizeText } from "@/lib/format"
 import { useStores } from "@/store/useStores"
-
-type Customer = {
-  id: string
-  name: string
-  phone: string
-  email: string
-  cpf: string
-  createdAt: number
-}
 
 type CustomerFormData = Omit<Customer, "id" | "createdAt">
 
 const emptyForm: CustomerFormData = { name: "", phone: "", email: "", cpf: "" }
-
-function readCustomers(storeId: string): Customer[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(`estoquepay.demo.customers.${storeId}`) ?? "[]")
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (customer): customer is Customer =>
-        Boolean(
-          customer &&
-            typeof customer.id === "string" &&
-            typeof customer.name === "string" &&
-            typeof customer.phone === "string" &&
-            typeof customer.email === "string" &&
-            typeof customer.cpf === "string" &&
-            typeof customer.createdAt === "number",
-        ),
-    )
-  } catch {
-    return []
-  }
-}
 
 function CustomerForm({
   customer,

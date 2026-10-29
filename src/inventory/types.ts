@@ -1,13 +1,27 @@
-export const CATEGORIES = ["Vestuário", "Calçados", "Acessórios", "Casa", "Papelaria"] as const
-export type Category = (typeof CATEGORIES)[number]
+/** Categorias iniciais de uma loja nova; o cadastro de produtos aceita qualquer categoria. */
+export const CATEGORIES = ["Cafés", "Despensa", "Chocolates", "Laticínios", "Frios"]
+export type Category = string
+
+export type Unit = "UN" | "KG" | "LT"
+export const UNITS: Unit[] = ["UN", "KG", "LT"]
+/** Unidades vendidas a granel aceitam quantidade fracionada (até 3 casas decimais). */
+export const isFractionalUnit = (unit: Unit) => unit !== "UN"
 
 export type Product = {
   id: string
   sku: string
+  /** Código de barras (EAN/GTIN). Vazio quando o produto não tem. */
+  ean: string
   name: string
   category: Category
+  unit: Unit
   priceCents: number
   costCents: number
+  /** Dados fiscais: obrigatórios apenas enquanto a NFC-e estiver ligada. */
+  ncm: string
+  cfop: string
+  /** Foto do produto (caminho público). Sem foto, a interface mostra um ícone. */
+  image?: string
   stock: number
   minStock: number
   active: boolean
@@ -22,12 +36,24 @@ export type ProductInput = {
   costCents: number
   minStock: number
   stock: number
+  ean?: string
+  unit?: Unit
+  ncm?: string
+  cfop?: string
 }
 
 export type PaymentMethod = "pix" | "cartao" | "dinheiro"
 export const PAYMENT_LABELS: Record<PaymentMethod, string> = { pix: "Pix", cartao: "Cartão", dinheiro: "Dinheiro" }
 
-export type SaleItem = { productId: string; name: string; sku: string; quantity: number; unitCents: number }
+export type SaleItem = {
+  productId: string
+  name: string
+  sku: string
+  unit?: Unit
+  /** Pode ser fracionada para produtos vendidos por KG ou LT. */
+  quantity: number
+  unitCents: number
+}
 
 export type Sale = {
   id: string
@@ -38,6 +64,12 @@ export type Sale = {
   payment: PaymentMethod
   status: "concluida" | "cancelada"
   canceledAt?: number
+  /** Apenas dígitos. Ausente quando o consumidor não foi identificado. */
+  cpf?: string
+  customerName?: string
+  /** Pagamento em dinheiro: valor entregue pelo cliente e troco devolvido. */
+  receivedCents?: number
+  changeCents?: number
 }
 
 export type MovementType = "entrada" | "saida" | "ajuste" | "venda" | "cancelamento"
@@ -66,6 +98,12 @@ export type MoveInput = {
   reason: string
 }
 
-export type SaleInput = { items: { productId: string; quantity: number }[]; payment: PaymentMethod }
+export type SaleInput = {
+  items: { productId: string; quantity: number }[]
+  payment: PaymentMethod
+  cpf?: string
+  customerName?: string
+  receivedCents?: number
+}
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string }

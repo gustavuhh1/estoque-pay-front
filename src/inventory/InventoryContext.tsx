@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useAuth } from "@/auth/useAuth"
 import { InventoryContext, type InventoryContextValue } from "@/inventory/inventory-context"
 import * as logic from "@/inventory/logic"
-import type { StoreInventory } from "@/inventory/types"
+import type { Product, StoreInventory } from "@/inventory/types"
 import { useStores } from "@/store/useStores"
 
 const STORAGE_KEY = "estoquepay.demo.inventory"
@@ -15,11 +15,23 @@ function isInventory(value: unknown): value is StoreInventory {
   return Boolean(inv && Array.isArray(inv.products) && Array.isArray(inv.sales) && Array.isArray(inv.movements))
 }
 
+function withDefaults(product: Product): Product {
+  const saved: Partial<Product> = product
+  return { ...product, unit: saved.unit ?? "UN", ean: saved.ean ?? "", ncm: saved.ncm ?? "", cfop: saved.cfop ?? "" }
+}
+
 function readData(): InventoryMap {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null")
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
-    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => isInventory(value)))
+    const valid = Object.entries(parsed).filter((entry): entry is [string, StoreInventory] => isInventory(entry[1]))
+    // Dados salvos antes dos campos de EAN, unidade e fiscais ganham valores padrão.
+    return Object.fromEntries(
+      valid.map(([storeId, inv]) => [
+        storeId,
+        { ...inv, products: inv.products.map(withDefaults) },
+      ]),
+    )
   } catch {
     return {}
   }
