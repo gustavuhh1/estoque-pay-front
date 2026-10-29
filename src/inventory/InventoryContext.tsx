@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
 import { useAuth } from "@/auth/useAuth"
+import { config } from "@/config"
+import { ApiInventoryProvider } from "@/inventory/ApiInventoryContext"
 import { InventoryContext, type InventoryContextValue } from "@/inventory/inventory-context"
 import * as logic from "@/inventory/logic"
 import { CATEGORIES, type Product, type StoreInventory } from "@/inventory/types"
@@ -44,7 +46,8 @@ function readData(): InventoryMap {
   }
 }
 
-export function InventoryProvider({ children }: { children: ReactNode }) {
+/** Estoque de demonstração em localStorage (modo sem API). */
+function DemoInventoryProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const { activeStoreId } = useStores()
   const [data, setData] = useState<InventoryMap>(() => readData())
@@ -86,18 +89,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const value = useMemo<InventoryContextValue>(
     () => ({
       ...current,
-      createProduct: (input) => run((inv) => logic.createProduct(inv, input)),
-      updateProduct: (id, input) => run((inv) => logic.updateProduct(inv, id, input)),
-      setProductActive: (id, active) => run((inv) => logic.setProductActive(inv, id, active)),
-      moveStock: (input) => run((inv) => logic.moveStock(inv, input)),
-      registerSale: (input) => run((inv) => logic.registerSale(inv, input)),
-      cancelSale: (saleId) => run((inv) => logic.cancelSale(inv, saleId)),
-      addCategory: (name) => run((inv) => logic.addCategory(inv, name)),
-      renameCategory: (from, to) => run((inv) => logic.renameCategory(inv, from, to)),
-      removeCategory: (name) => run((inv) => logic.removeCategory(inv, name)),
+      isLoading: false,
+      error: null,
+      reload: () => Promise.resolve(),
+      createProduct: (input) => Promise.resolve(run((inv) => logic.createProduct(inv, input))),
+      updateProduct: (id, input) => Promise.resolve(run((inv) => logic.updateProduct(inv, id, input))),
+      setProductActive: (id, active) => Promise.resolve(run((inv) => logic.setProductActive(inv, id, active))),
+      moveStock: (input) => Promise.resolve(run((inv) => logic.moveStock(inv, input))),
+      registerSale: (input) => Promise.resolve(run((inv) => logic.registerSale(inv, input))),
+      cancelSale: (saleId) => Promise.resolve(run((inv) => logic.cancelSale(inv, saleId))),
+      addCategory: (name) => Promise.resolve(run((inv) => logic.addCategory(inv, name))),
+      renameCategory: (from, to) => Promise.resolve(run((inv) => logic.renameCategory(inv, from, to))),
+      removeCategory: (name) => Promise.resolve(run((inv) => logic.removeCategory(inv, name))),
     }),
     [current, run],
   )
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>
+}
+
+/** Com a API configurada usa produtos, categorias e estoque reais; sem ela, os dados de demonstração. */
+export function InventoryProvider({ children }: { children: ReactNode }) {
+  return config.useApi ? <ApiInventoryProvider>{children}</ApiInventoryProvider> : <DemoInventoryProvider>{children}</DemoInventoryProvider>
 }

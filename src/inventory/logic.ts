@@ -86,7 +86,7 @@ export function generateSku(name: string, products: Product[]) {
 export function validateProductForm(
   raw: RawProductForm,
   products: Product[],
-  options: { editingId?: string; sku?: string; nfceEnabled: boolean },
+  options: { editingId?: string; sku?: string; nfceEnabled: boolean; categoryOptional?: boolean },
 ): { errors: ProductFormErrors; input: Omit<ProductInput, "stock"> | null; fiscalLocked: boolean } {
   const errors: ProductFormErrors = {}
 
@@ -103,7 +103,7 @@ export function validateProductForm(
   if (!UNITS.includes(unit)) errors.unit = "Escolha o tipo de medida."
 
   const category = raw.category.trim()
-  if (!category) errors.category = "Escolha uma categoria."
+  if (!category && !options.categoryOptional) errors.category = "Escolha uma categoria."
 
   const priceCents = parseMoneyToCents(raw.price)
   if (priceCents === null) errors.price = "Informe um preço válido (ex.: 129,90)."

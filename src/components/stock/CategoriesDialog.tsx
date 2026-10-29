@@ -16,25 +16,25 @@ export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
 
   const countOf = (category: string) => products.filter((product) => product.category === category).length
 
-  function add(event: FormEvent) {
+  async function add(event: FormEvent) {
     event.preventDefault()
-    const result = addCategory(name)
+    const result = await addCategory(name)
     if (!result.ok) return setMessage({ tone: "error", text: result.error })
     setName("")
     setMessage(null)
   }
 
-  function saveRename() {
+  async function saveRename() {
     if (!editing) return
-    const result = renameCategory(editing.from, editing.to)
+    const result = await renameCategory(editing.from, editing.to)
     if (!result.ok) return setMessage({ tone: "error", text: result.error })
     setEditing(null)
     setMessage(null)
   }
 
-  function confirmRemove() {
+  async function confirmRemove() {
     if (!removing) return
-    const result = removeCategory(removing)
+    const result = await removeCategory(removing)
     if (!result.ok) return setMessage({ tone: "error", text: result.error })
     setMessage({
       tone: "info",
@@ -74,7 +74,7 @@ export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
                   aria-label={`Novo nome de ${category}`}
                   value={editing.to}
                   onChange={(event) => setEditing({ from: category, to: event.target.value })}
-                  onKeyDown={(event) => event.key === "Enter" && saveRename()}
+                  onKeyDown={(event) => event.key === "Enter" && void saveRename()}
                   maxLength={40}
                   autoFocus
                   className="h-9"

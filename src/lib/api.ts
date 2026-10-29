@@ -95,7 +95,7 @@ export const api = {
   get: <T>(path: string, options?: Omit<RequestOptions, "body">) => request<T>("GET", path, options),
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "body">) => request<T>("POST", path, { ...options, body }),
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "body">) => request<T>("PATCH", path, { ...options, body }),
-  delete: <T>(path: string, options?: Omit<RequestOptions, "body">) => request<T>("DELETE", path, options),
+  delete: <T>(path: string, options?: RequestOptions) => request<T>("DELETE", path, options),
 }
 
 /** Mensagem amigável para qualquer erro, com os códigos de plano da API traduzidos em aviso de upgrade. */
