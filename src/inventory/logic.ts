@@ -1,5 +1,8 @@
-import { parseMoneyToCents, parseWholeNumber } from "@/lib/format"
+import { normalizeText, parseMoneyToCents, parseQuantity, parseWholeNumber } from "@/lib/format"
 import {
+  CATEGORIES,
+  NO_CATEGORY,
+  UNITS,
   isFractionalUnit,
   type Category,
   type Movement,
@@ -13,7 +16,7 @@ import {
   type Unit,
 } from "@/inventory/types"
 
-export const EMPTY_INVENTORY: StoreInventory = { products: [], sales: [], movements: [] }
+export const EMPTY_INVENTORY: StoreInventory = { products: [], sales: [], movements: [], categories: [...CATEGORIES] }
 
 /** Arredonda para 3 casas (milésimos), a precisão das quantidades fracionadas. */
 export const roundQty = (value: number) => Math.round(value * 1000) / 1000
@@ -47,14 +50,17 @@ export function needsRestock(products: Product[]) {
 // ---------- validação de formulário de produto ----------
 export type RawProductForm = {
   name: string
-  sku: string
+  ean: string
+  unit: string
   category: string
-  price: string
   cost: string
+  price: string
+  ncm: string
+  cfop: string
   minStock: string
-  stock: string
+  active: boolean
 }
-export type ProductFormErrors = Partial<Record<keyof RawProductForm, string>>
+export type ProductFormErrors = Partial<Record<Exclude<keyof RawProductForm, "active">, string>>
 
 const MAX_CENTS = 100_000_000
 const MAX_UNITS = 1_000_000
@@ -62,23 +68,41 @@ const MAX_UNITS = 1_000_000
 /** Quantidade válida: finita, entre 0 e o limite, com no máximo 3 casas decimais. */
 const isQuantity = (value: number) => Number.isFinite(value) && value >= 0 && value <= MAX_UNITS && roundQty(value) === value
 
+/** Produto sem NCM ou CFOP: não pode ficar ativo enquanto a NFC-e estiver ligada. */
+export const missingFiscal = (product: Pick<Product, "ncm" | "cfop">) => !product.ncm.trim() || !product.cfop.trim()
+
+/** SKU automático no formato ABC-DEF-001, único dentro da loja. */
+export function generateSku(name: string, products: Product[]) {
+  const words = normalizeText(name).toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((word) => word.length >= 3)
+  const first = (words[0] ?? "PRD").slice(0, 3).padEnd(3, "X")
+  const second = (words[1] ?? "GEN").slice(0, 3).padEnd(3, "X")
+  for (let n = 1; ; n++) {
+    const sku = `${first}-${second}-${String(n).padStart(3, "0")}`
+    if (!products.some((product) => product.sku === sku)) return sku
+  }
+}
+
 export function validateProductForm(
   raw: RawProductForm,
   products: Product[],
-  options: { editingId?: string; requireStock: boolean },
-): { errors: ProductFormErrors; input: ProductInput | null } {
+  options: { editingId?: string; sku?: string; nfceEnabled: boolean },
+): { errors: ProductFormErrors; input: Omit<ProductInput, "stock"> | null; fiscalLocked: boolean } {
   const errors: ProductFormErrors = {}
 
   const name = raw.name.trim()
   if (name.length < 2) errors.name = "Informe o nome do produto."
   else if (name.length > 80) errors.name = "Use no máximo 80 caracteres."
 
-  const sku = raw.sku.trim().toUpperCase()
-  if (!/^[A-Z0-9][A-Z0-9._-]{1,31}$/.test(sku)) errors.sku = "Use de 2 a 32 caracteres: letras, números, ponto, hífen ou _."
-  else if (products.some((product) => product.sku === sku && product.id !== options.editingId))
-    errors.sku = "Já existe um produto com este SKU."
+  const ean = raw.ean.trim()
+  if (ean && !/^\d{8,14}$/.test(ean)) errors.ean = "O código de barras deve ter de 8 a 14 dígitos."
+  else if (ean && products.some((product) => product.ean === ean && product.id !== options.editingId))
+    errors.ean = "Este código de barras já está em uso em outro produto."
 
-  if (!raw.category.trim()) errors.category = "Escolha uma categoria."
+  const unit = raw.unit as Unit
+  if (!UNITS.includes(unit)) errors.unit = "Escolha o tipo de medida."
+
+  const category = raw.category.trim()
+  if (!category) errors.category = "Escolha uma categoria."
 
   const priceCents = parseMoneyToCents(raw.price)
   if (priceCents === null) errors.price = "Informe um preço válido (ex.: 129,90)."
@@ -88,21 +112,81 @@ export function validateProductForm(
   const costCents = raw.cost.trim() === "" ? 0 : parseMoneyToCents(raw.cost)
   if (costCents === null) errors.cost = "Informe um custo válido (ex.: 58,00) ou deixe em branco."
   else if (costCents > MAX_CENTS) errors.cost = "Valor acima do permitido."
+  else if (priceCents !== null && priceCents > 0 && priceCents < costCents) errors.price = "A trava anti-prejuízo não permite preço abaixo do custo."
 
-  const minStock = parseWholeNumber(raw.minStock === "" ? "0" : raw.minStock)
-  if (minStock === null || minStock > MAX_UNITS) errors.minStock = "Informe um número inteiro (0 ou mais)."
+  const digits = raw.ncm.replace(/\D/g, "")
+  if (raw.ncm.trim() && digits.length !== 8) errors.ncm = "O NCM tem 8 dígitos (ex.: 0901.21.00)."
+  const ncm = digits.length === 8 ? `${digits.slice(0, 4)}.${digits.slice(4, 6)}.${digits.slice(6)}` : ""
 
-  let stock = 0
-  if (options.requireStock) {
-    const parsed = parseWholeNumber(raw.stock === "" ? "0" : raw.stock)
-    if (parsed === null || parsed > MAX_UNITS) errors.stock = "Informe um número inteiro (0 ou mais)."
-    else stock = parsed
-  }
+  const cfop = raw.cfop.trim()
+  if (cfop && !/^\d{4}$/.test(cfop)) errors.cfop = "O CFOP tem 4 dígitos (ex.: 5102)."
 
-  if (Object.keys(errors).length > 0) return { errors, input: null }
+  const minRaw = raw.minStock.trim() === "" ? "0" : raw.minStock
+  const minStock = UNITS.includes(unit) && isFractionalUnit(unit) ? parseQuantity(minRaw) : parseWholeNumber(minRaw)
+  if (minStock === null || minStock > MAX_UNITS) errors.minStock = "Informe uma quantidade mínima válida (0 ou mais)."
+
+  if (Object.keys(errors).length > 0) return { errors, input: null, fiscalLocked: false }
+
+  const fiscalLocked = options.nfceEnabled && missingFiscal({ ncm, cfop })
   return {
     errors,
-    input: { name, sku, category: raw.category.trim(), priceCents: priceCents!, costCents: costCents!, minStock: minStock!, stock },
+    fiscalLocked,
+    input: {
+      name,
+      sku: options.sku ?? generateSku(name, products),
+      category,
+      priceCents: priceCents!,
+      costCents: costCents!,
+      minStock: minStock!,
+      ean,
+      unit,
+      ncm,
+      cfop,
+      active: raw.active && !fiscalLocked,
+    },
+  }
+}
+
+// ---------- categorias ----------
+export function addCategory(inv: StoreInventory, name: string): Outcome<string> {
+  const value = name.trim()
+  if (value.length < 2) return fail("Informe o nome da categoria (mínimo 2 caracteres).")
+  if (value.length > 40) return fail("Use no máximo 40 caracteres.")
+  if (inv.categories.some((category) => normalizeText(category) === normalizeText(value))) return fail("Já existe uma categoria com este nome.")
+  return { ok: true, inventory: { ...inv, categories: [...inv.categories, value] }, value }
+}
+
+export function renameCategory(inv: StoreInventory, from: string, to: string): Outcome<string> {
+  const value = to.trim()
+  if (value.length < 2) return fail("Informe o nome da categoria (mínimo 2 caracteres).")
+  if (value.length > 40) return fail("Use no máximo 40 caracteres.")
+  if (!inv.categories.includes(from)) return fail("Categoria não encontrada.")
+  if (inv.categories.some((category) => category !== from && normalizeText(category) === normalizeText(value))) return fail("Já existe uma categoria com este nome.")
+  return {
+    ok: true,
+    inventory: {
+      ...inv,
+      categories: inv.categories.map((category) => (category === from ? value : category)),
+      products: inv.products.map((product) => (product.category === from ? { ...product, category: value } : product)),
+    },
+    value,
+  }
+}
+
+/** Excluir uma categoria nunca apaga produtos: eles passam para "Sem categoria". */
+export function removeCategory(inv: StoreInventory, name: string): Outcome<number> {
+  if (!inv.categories.includes(name)) return fail("Categoria não encontrada.")
+  const affected = inv.products.filter((product) => product.category === name).length
+  const categories = inv.categories.filter((category) => category !== name)
+  if (affected > 0 && !categories.includes(NO_CATEGORY)) categories.push(NO_CATEGORY)
+  return {
+    ok: true,
+    inventory: {
+      ...inv,
+      categories,
+      products: inv.products.map((product) => (product.category === name ? { ...product, category: NO_CATEGORY } : product)),
+    },
+    value: affected,
   }
 }
 
@@ -123,8 +207,9 @@ function movement(product: Product, type: Movement["type"], delta: number, reaso
 
 export function createProduct(inv: StoreInventory, input: ProductInput, at = Date.now()): Outcome<Product> {
   if (inv.products.some((product) => product.sku === input.sku)) return fail("Já existe um produto com este SKU.")
-  const { ean = "", unit = "UN", ncm = "", cfop = "", ...rest } = input
-  const product: Product = { id: uid(), ...rest, ean, unit, ncm, cfop, active: true, createdAt: at }
+  if (input.ean && inv.products.some((product) => product.ean === input.ean)) return fail("Este código de barras já está em uso em outro produto.")
+  const { ean = "", unit = "UN", ncm = "", cfop = "", active = true, ...rest } = input
+  const product: Product = { id: uid(), ...rest, ean, unit, ncm, cfop, active, createdAt: at }
   const movements = input.stock > 0 ? [movement(product, "entrada", input.stock, "Estoque inicial", at), ...inv.movements] : inv.movements
   return { ok: true, inventory: { ...inv, products: [...inv.products, product], movements }, value: product }
 }
@@ -133,10 +218,13 @@ export function updateProduct(inv: StoreInventory, id: string, input: Omit<Produ
   const current = inv.products.find((product) => product.id === id)
   if (!current) return fail("Produto não encontrado.")
   if (inv.products.some((product) => product.sku === input.sku && product.id !== id)) return fail("Já existe um produto com este SKU.")
-  const { ean, unit, ncm, cfop, ...rest } = input
+  if (input.ean && inv.products.some((product) => product.ean === input.ean && product.id !== id))
+    return fail("Este código de barras já está em uso em outro produto.")
+  const { ean, unit, ncm, cfop, active, ...rest } = input
   const updated: Product = {
     ...current,
     ...rest,
+    active: active ?? current.active,
     ean: ean ?? current.ean,
     unit: unit ?? current.unit,
     ncm: ncm ?? current.ncm,
@@ -221,7 +309,7 @@ export function registerSale(inv: StoreInventory, input: SaleInput, at = Date.no
     sale.receivedCents = input.receivedCents
     sale.changeCents = input.receivedCents - totalCents
   }
-  return { ok: true, inventory: { products, movements, sales: [sale, ...inv.sales] }, value: sale }
+  return { ok: true, inventory: { ...inv, products, movements, sales: [sale, ...inv.sales] }, value: sale }
 }
 
 export function cancelSale(inv: StoreInventory, saleId: string, at = Date.now()): Outcome<Sale> {
@@ -242,7 +330,7 @@ export function cancelSale(inv: StoreInventory, saleId: string, at = Date.now())
     ]
   }
   const canceled: Sale = { ...sale, status: "cancelada", canceledAt: at }
-  return { ok: true, inventory: { products, movements, sales: inv.sales.map((s) => (s.id === saleId ? canceled : s)) }, value: canceled }
+  return { ok: true, inventory: { ...inv, products, movements, sales: inv.sales.map((s) => (s.id === saleId ? canceled : s)) }, value: canceled }
 }
 
 // ---------- indicadores ----------
@@ -320,6 +408,7 @@ export function seedFor(storeId: string, now = Date.now()): StoreInventory {
     })),
     sales: [],
     movements: [],
+    categories: [...CATEGORIES],
   }
   inv.movements = inv.products
     .filter((p) => p.stock > 0)

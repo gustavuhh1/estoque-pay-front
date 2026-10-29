@@ -220,7 +220,7 @@ export default function Dashboard() {
           <div className="mt-6 grid gap-2">
             {[
               { label: "Abrir PDV", to: "/pdv" },
-              { label: "Gerenciar produtos", to: "/produtos" },
+              { label: "Gerenciar produtos", to: "/estoque" },
               { label: "Conferir estoque", to: "/estoque" },
             ].map(({ label, to }) => (
               <Link
