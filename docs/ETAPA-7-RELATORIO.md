@@ -235,4 +235,4 @@
 | ℹ️ OBSERVAÇÃO | Cold start da hospedagem | Não dá para forçar sob demanda. Nas rodadas de hoje a Render respondeu em cerca de 1 s (instância já acordada). A tela "Verificando sua sessão..." traz o aviso de que o servidor gratuito hiberna e a primeira abertura pode levar cerca de 1 minuto; o limite de espera das chamadas é de 90 s. |
 
 ## Dados de teste deixados em produção
-Contas `teste-etapa7-*` e `teste-front-*`, lojas "Loja A/B/C/D" e "Loja UI", produtos, vendas, clientes e cupons de teste, e a conta `gustavomrodrigues11@gmail.com` (criada para o cenário 2; senha trocada pelo dono). Não há rota para apagar lojas, então esses dados ficam até uma limpeza no banco.
+Contas `teste-etapa7-*` e `teste-front-*`, lojas "Loja A/B/C/D" e "Loja UI", produtos, vendas, clientes e cupons de teste, e a conta criada com o e-mail real do dono para o cenário 2 (senha trocada por ele). Não há rota para apagar lojas, então esses dados ficam até uma limpeza no banco.
