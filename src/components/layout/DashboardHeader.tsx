@@ -28,7 +28,9 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
           >
             <Menu className="h-5 w-5" />
           </button>
-          <StoreSwitcher />
+          <div className="shrink-0">
+            <StoreSwitcher />
+          </div>
           <div className="relative hidden w-full max-w-[450px] md:block">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
             <input
