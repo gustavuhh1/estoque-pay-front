@@ -7,6 +7,9 @@ import { useAuth } from "@/auth/useAuth"
 import { config } from "@/config"
 import { useStores } from "@/store/useStores"
 
+const CASHIER_PATHS = ["/pdv", "/vendas"]
+const NEUTRAL_PATHS = ["/lojas", "/onboarding", "/403", "/erro-rede"]
+
 function Screen({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-screen items-center justify-center bg-[var(--color-paper)] px-5">{children}</div>
 }
@@ -27,11 +30,29 @@ function Loading({ message }: { message: string }) {
 }
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth()
-  const { isLoading: storesLoading, loadError, stores, reload } = useStores()
+  const { isAuthenticated, isLoading, connectionError, refreshSession } = useAuth()
+  const { isLoading: storesLoading, loadError, stores, reload, activeStore } = useStores()
   const location = useLocation()
 
   if (isLoading) return <Loading message="Verificando sua sessão..." />
+
+  // Sem resposta do servidor ao verificar a sessão: erro de conexão com nova tentativa, em vez de mandar ao login.
+  if (!isAuthenticated && connectionError) {
+    return (
+      <Screen>
+        <div className="w-full max-w-md text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-alert-soft)] text-[var(--color-alert)]">
+            <WifiOff className="h-6 w-6" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold">Não foi possível conectar ao servidor</h1>
+          <p className="mt-2 text-sm text-[var(--color-slate)]">Confira sua conexão. Se estiver tudo certo, o servidor pode estar iniciando ou fora do ar: tente de novo em instantes.</p>
+          <Button className="mt-6" variant="accent" onClick={() => void refreshSession()}>
+            Tentar de novo
+          </Button>
+        </div>
+      </Screen>
+    )
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
@@ -58,6 +79,11 @@ export default function ProtectedRoute() {
     }
     // Conta nova, sem nenhuma loja: o primeiro passo é criar a loja.
     if (stores.length === 0 && location.pathname !== "/onboarding") return <Navigate to="/onboarding" replace />
+
+    // O Caixa (Colaborador) só opera o PDV e consulta as vendas: as demais telas são de Owner e Gestor.
+    if (activeStore.role === "Colaborador" && stores.length > 0 && !CASHIER_PATHS.includes(location.pathname) && !NEUTRAL_PATHS.includes(location.pathname)) {
+      return <Navigate to={location.pathname === "/painel" ? "/pdv" : "/403"} replace />
+    }
   }
 
   return <Outlet />

@@ -18,6 +18,8 @@ async function betterAuthGetSession() {
     headers: { Accept: "application/json" },
   })
 
+  // Servidor com problema não é sessão encerrada: quem chama decide mostrar o erro de conexão.
+  if (response.status >= 500) throw new Error(`get-session ${response.status}`)
   if (!response.ok) return null
   const payload = await response.json()
   if (!payload?.session || !payload?.user) return null
@@ -56,6 +58,8 @@ async function betterAuthSignOut() {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    // O servidor recusa JSON sem corpo (400): sem isso a sessão não é encerrada.
+    body: "{}",
   })
 }
 
@@ -78,6 +82,7 @@ function readDemoSession() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState(false)
 
   const refreshSession = useCallback(async () => {
     if (!isBetterAuthConfigured) {
@@ -89,9 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const current = await betterAuthGetSession()
       setSession(current)
+      setConnectionError(false)
       return current
     } catch {
-      setSession(null)
+      // Sem resposta do servidor: quem já estava logado continua; sem sessão carregada, o ProtectedRoute mostra o erro.
+      setConnectionError(true)
       return null
     }
   }, [])
@@ -103,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       const current = await refreshSession()
       if (!cancelled) {
-        setSession(current)
+        if (current) setSession(current)
         setIsLoading(false)
       }
     })()
@@ -211,13 +218,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAuthenticated: Boolean(session),
+      connectionError,
       isBetterAuth: isBetterAuthConfigured,
       signIn,
       signUp,
       signOut,
       refreshSession,
     }),
-    [isLoading, refreshSession, session, signIn, signOut, signUp],
+    [connectionError, isLoading, refreshSession, session, signIn, signOut, signUp],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

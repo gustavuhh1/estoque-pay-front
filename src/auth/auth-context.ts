@@ -13,6 +13,8 @@ export type AuthContextValue = {
   session: UserSession | null
   isLoading: boolean
   isAuthenticated: boolean
+  /** O servidor não respondeu ao verificar a sessão (sem rede ou fora do ar): não é o mesmo que sessão encerrada. */
+  connectionError: boolean
   isBetterAuth: boolean
   signIn: (email: string, password: string) => Promise<boolean>
   signUp: (name: string, email: string, password: string) => Promise<boolean>

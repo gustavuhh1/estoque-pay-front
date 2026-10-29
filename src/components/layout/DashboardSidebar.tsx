@@ -2,6 +2,7 @@ import { Boxes, LayoutDashboard, LogOut, Receipt, Settings, ShoppingCart, Users,
 import { NavLink, Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
+import { config } from "@/config"
 import { useStores } from "@/store/useStores"
 
 const navigation = [
@@ -22,6 +23,8 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
   const navigate = useNavigate()
   const { session, signOut } = useAuth()
   const { activeStore } = useStores()
+  // Com a API, o Caixa (Colaborador) só vê o PDV e as vendas.
+  const items = config.useApi && activeStore.role === "Colaborador" ? navigation.filter((item) => item.to === "/pdv" || item.to === "/vendas") : navigation
 
   const name = session?.user.name ?? "Usuário"
   const initial = name.trim()[0]?.toUpperCase() ?? "U"
@@ -66,7 +69,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         </div>
 
         <nav className="mt-9" aria-label="Navegação principal">
-          {navigation.map(({ label, icon: Icon, to }) => (
+          {items.map(({ label, icon: Icon, to }) => (
             <NavLink
               key={label}
               to={to}
