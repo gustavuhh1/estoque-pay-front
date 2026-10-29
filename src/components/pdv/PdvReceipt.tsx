@@ -30,9 +30,11 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
       <div className="flex flex-col gap-[3px] text-center text-[11px] text-[#444]">
         <strong className="text-xs uppercase tracking-[0.06em] text-[#111]">{store.name}</strong>
         <span>CNPJ {store.cnpj}</span>
-        <span>
-          {store.city}/{store.state}
-        </span>
+        {store.city && (
+          <span>
+            {store.city}/{store.state}
+          </span>
+        )}
       </div>
       <div className={dash} />
       <div className="text-center text-[11px] leading-[1.6] text-[#111]">

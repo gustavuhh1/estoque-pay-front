@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 
 import { AuthContext, type AuthContextValue, type UserSession } from "@/auth/auth-context"
+import { config } from "@/config"
+import { UNAUTHORIZED_EVENT } from "@/lib/api"
+
 const DEMO_STORAGE_KEY = "estoquepay.demo.session"
 const DEMO_SESSION_TTL = 30 * 60 * 1000
 
-const betterAuthBaseUrl = import.meta.env.VITE_BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""
+const betterAuthBaseUrl = config.authUrl
 const isBetterAuthConfigured = Boolean(betterAuthBaseUrl)
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -109,6 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true
     }
   }, [refreshSession])
+
+  // A API respondeu 401 em qualquer chamada: a sessão acabou e o ProtectedRoute leva ao login.
+  useEffect(() => {
+    const onUnauthorized = () => setSession(null)
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
+  }, [])
 
   useEffect(() => {
     const onFocus = () => {

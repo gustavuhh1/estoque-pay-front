@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { config } from "@/config"
+import { errorMessage } from "@/lib/api"
 import { digitsOf, maskCnpj, maskPhone } from "@/lib/format"
 import type { Store } from "@/store/store-context"
 import { useStores } from "@/store/useStores"
@@ -16,16 +18,16 @@ const mono = "font-[family-name:var(--font-mono)]"
 
 type Errors = Partial<Record<"name" | "cnpj" | "phone" | "city" | "logo", string>>
 
-export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: (message: string) => void }) {
+export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: (message: string, tone?: "success" | "error") => void }) {
   const { updateStore } = useStores()
   const fileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(store.name)
   const [cnpj, setCnpj] = useState(store.cnpj)
   const [ie, setIe] = useState(store.ie ?? "")
-  const [phone, setPhone] = useState(store.phone)
+  const [phone, setPhone] = useState(store.phone ?? "")
   const [address, setAddress] = useState(store.address ?? "")
-  const [city, setCity] = useState(store.city)
-  const [state, setState] = useState(store.state)
+  const [city, setCity] = useState(store.city ?? "")
+  const [state, setState] = useState(store.state ?? "CE")
   const [logo, setLogo] = useState(store.logo ?? "")
   const [errors, setErrors] = useState<Errors>({})
 
@@ -44,23 +46,34 @@ export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: 
     reader.readAsDataURL(file)
   }
 
-  function submit(event: FormEvent) {
+  // Com a API só nome, CNPJ e inscrição estadual são guardados; logo, telefone, endereço e cidade são do modo demonstração.
+  const local = !config.useApi
+
+  async function submit(event: FormEvent) {
     event.preventDefault()
     const found: Errors = {}
     if (name.trim().length < 2) found.name = "Informe o nome fantasia."
     if (digitsOf(cnpj).length !== 14) found.cnpj = "O CNPJ deve ter 14 dígitos."
-    if (digitsOf(phone).length < 10) found.phone = "Informe o telefone com DDD."
-    if (!city.trim()) found.city = "Informe a cidade."
+    if (local && digitsOf(phone).length < 10) found.phone = "Informe o telefone com DDD."
+    if (local && !city.trim()) found.city = "Informe a cidade."
     setErrors(found)
     if (Object.keys(found).length > 0) return
     // updateStore faz merge: só os campos informados mudam.
-    updateStore(store.id, { name: name.trim(), cnpj, phone, city: city.trim(), state, ie: ie.trim(), address: address.trim(), logo: logo || undefined })
-    onSaved("Dados da empresa salvos.")
+    try {
+      await updateStore(
+        store.id,
+        local ? { name: name.trim(), cnpj, phone, city: city.trim(), state, ie: ie.trim(), address: address.trim(), logo: logo || undefined } : { name: name.trim(), cnpj, ie: ie.trim() },
+      )
+      onSaved("Dados da empresa salvos.")
+    } catch (error) {
+      onSaved(errorMessage(error), "error")
+    }
   }
 
   return (
     <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
       <form onSubmit={submit} noValidate>
+        {local && (
         <div className="mb-6 flex items-center gap-5">
           <button
             type="button"
@@ -93,6 +106,7 @@ export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: 
             )}
           </div>
         </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="profile-name" label="Nome fantasia" error={errors.name}>
@@ -104,6 +118,8 @@ export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: 
           <Field id="profile-ie" label="Inscrição estadual">
             <Input id="profile-ie" value={ie} onChange={(event) => setIe(event.target.value)} placeholder="082.114.550.119" className={mono} />
           </Field>
+          {local && (
+            <>
           <Field id="profile-phone" label="Telefone comercial" error={errors.phone}>
             <Input id="profile-phone" value={phone} onChange={(event) => { setPhone(maskPhone(event.target.value)); clear("phone") }} inputMode="tel" placeholder="(00) 0000-0000" className={mono} {...aria("phone")} />
           </Field>
@@ -122,6 +138,8 @@ export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: 
               ))}
             </Select>
           </Field>
+            </>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end">

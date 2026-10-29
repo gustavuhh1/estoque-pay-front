@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
+import { config } from "@/config"
+import { errorMessage } from "@/lib/api"
+import { maskCnpj } from "@/lib/format"
 import { useStores } from "@/store/useStores"
 
-type FormData = { name: string; cnpj: string; phone: string; city: string; state: string }
+type FormData = { name: string; cnpj: string; ie: string; phone: string; city: string; state: string }
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -16,19 +19,32 @@ export default function Onboarding() {
   const { createStore } = useStores()
   const [step, setStep] = useState(1)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
   const initialStoreName = (location.state as { storeName?: string } | null)?.storeName ?? ""
-  const [data, setData] = useState<FormData>({ name: initialStoreName, cnpj: "", phone: "", city: "", state: "CE" })
+  const [data, setData] = useState<FormData>({ name: initialStoreName, cnpj: "", ie: "", phone: "", city: "", state: "CE" })
 
   const update = (key: keyof FormData, value: string) => setData((current) => ({ ...current, [key]: value }))
 
-  const handleNext = (event: FormEvent) => {
+  // Com a API a loja só tem nome, CNPJ e inscrição estadual: o passo de localização fica de fora.
+  const steps = config.useApi ? [1] : [1, 2]
+
+  const handleNext = async (event: FormEvent) => {
     event.preventDefault()
-    if (step === 1) {
+    if (step === 1 && steps.length > 1) {
       setStep(2)
       return
     }
-    createStore(data)
-    setSaved(true)
+    setError("")
+    setSaving(true)
+    try {
+      await createStore(config.useApi ? { name: data.name, cnpj: data.cnpj, ie: data.ie } : data)
+      setSaved(true)
+    } catch (failure) {
+      setError(errorMessage(failure))
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -53,7 +69,7 @@ export default function Onboarding() {
         {!saved ? (
           <div className="mx-auto mt-8 max-w-3xl">
             <div className="mb-7 flex items-center justify-center gap-4">
-              {[1,2].map((item) => (
+              {steps.map((item) => (
                 <div key={item} className="flex items-center gap-2">
                   <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${step >= item ? "bg-[var(--color-amber)] text-white" : "bg-[var(--color-paper-dim)] text-[var(--color-slate)]"}`}>{step > item ? <Check className="h-4 w-4" /> : item}</span>
                   <span className="hidden text-xs font-semibold text-[var(--color-slate)] sm:inline">{item === 1 ? "Dados da loja" : "Localização"}</span>
@@ -69,8 +85,8 @@ export default function Onboarding() {
                     <div><h2 className="font-[family-name:var(--font-display)] text-xl font-semibold">Dados principais</h2><p className="mt-1 text-sm text-[var(--color-slate)]">Comece identificando o estabelecimento.</p></div>
                     <div className="grid gap-5 sm:grid-cols-2">
                       <div className="space-y-2 sm:col-span-2"><Label htmlFor="store-name">Nome da loja</Label><Input id="store-name" value={data.name} onChange={(e) => update("name", e.target.value)} placeholder="Loja Ponto Certo" required /></div>
-                      <div className="space-y-2"><Label htmlFor="cnpj">CNPJ</Label><Input id="cnpj" value={data.cnpj} onChange={(e) => update("cnpj", e.target.value)} placeholder="00.000.000/0000-00" required /></div>
-                      <div className="space-y-2"><Label htmlFor="phone">Telefone</Label><div className="relative"><Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/70" /><Input id="phone" value={data.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(85) 3333-2200" className="pl-9" required /></div></div>
+                      <div className="space-y-2"><Label htmlFor="cnpj">CNPJ</Label><Input id="cnpj" value={data.cnpj} onChange={(e) => update("cnpj", config.useApi ? maskCnpj(e.target.value) : e.target.value)} placeholder="00.000.000/0000-00" inputMode="numeric" required /></div>
+                      {config.useApi ? <div className="space-y-2"><Label htmlFor="ie">Inscrição estadual (opcional)</Label><Input id="ie" value={data.ie} onChange={(e) => update("ie", e.target.value)} placeholder="082.114.550.119" /></div> : <div className="space-y-2"><Label htmlFor="phone">Telefone</Label><div className="relative"><Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/70" /><Input id="phone" value={data.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(85) 3333-2200" className="pl-9" required /></div></div>}
                     </div>
                   </>
                 ) : (
@@ -85,9 +101,10 @@ export default function Onboarding() {
                   </>
                 )}
 
+                {error && <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3.5 py-2.5 text-sm font-medium text-[var(--color-alert-dark)]">{error}</p>}
                 <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-6 sm:flex-row sm:justify-between">
                   {step === 1 ? <Button asChild type="button" variant="ghost"><Link to="/lojas"><ArrowLeft className="h-4 w-4" />Voltar para lojas</Link></Button> : <Button type="button" variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4" />Voltar</Button>}
-                  <Button type="submit" variant="accent">{step === 1 ? "Continuar" : "Criar estabelecimento"}<ArrowRight className="h-4 w-4" /></Button>
+                  <Button type="submit" variant="accent" disabled={saving}>{saving ? "Criando..." : step === 1 && steps.length > 1 ? "Continuar" : "Criar estabelecimento"}<ArrowRight className="h-4 w-4" /></Button>
                 </div>
               </form>
             </Card>
@@ -97,7 +114,7 @@ export default function Onboarding() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"><CircleCheck className="h-7 w-7" /></div>
             <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-amber-dark)]">Estabelecimento criado</p>
             <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-semibold">Sua loja está pronta para o painel.</h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[var(--color-slate)]">No backend real, o vínculo de Owner será persistido junto ao estabelecimento. Nesta etapa, o fluxo é mantido como protótipo funcional.</p>
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[var(--color-slate)]">{config.useApi ? "Você já é o Owner desta loja. O próximo passo é cadastrar produtos e abrir o caixa." : "No backend real, o vínculo de Owner será persistido junto ao estabelecimento. Nesta etapa, o fluxo é mantido como protótipo funcional."}</p>
             <Button className="mt-7" variant="accent" onClick={() => navigate("/painel", { replace: true })}>Ir para o Dashboard<ArrowRight className="h-4 w-4" /></Button>
           </Card>
         )}
