@@ -266,15 +266,16 @@ type SeedProduct = {
   min: number
   ncm: string
   cfop: string
+  image?: string
   active?: boolean
 }
 const SEED_PRODUCTS: SeedProduct[] = [
-  { sku: "CAF-BRB-001", ean: "7891000315507", name: "Café Bourbon Special", category: "Cafés", unit: "UN", price: 42.9, cost: 24.9, stock: 45, min: 10, ncm: "0901.21.00", cfop: "5102" },
-  { sku: "AZE-EXT-012", ean: "7891000100224", name: "Azeite Extra Virgem", category: "Despensa", unit: "UN", price: 58, cost: 31, stock: 8, min: 12, ncm: "1509.10.00", cfop: "5102" },
-  { sku: "CHO-AMR-70", ean: "7891000244418", name: "Chocolate Amargo 70%", category: "Chocolates", unit: "UN", price: 18.5, cost: 9.8, stock: 0, min: 6, ncm: "1806.32.10", cfop: "5102" },
-  { sku: "LEI-ORG-A2", ean: "7891000530012", name: "Leite Orgânico A2", category: "Laticínios", unit: "LT", price: 9.9, cost: 5.4, stock: 12, min: 6, ncm: "0401.20.10", cfop: "5102" },
-  { sku: "QUE-MIN-500", ean: "", name: "Queijo Minas Curado", category: "Frios", unit: "KG", price: 69.9, cost: 38, stock: 4.35, min: 2, ncm: "0406.90.20", cfop: "5102" },
-  { sku: "IOG-GRE-100", ean: "7891000612345", name: "Iogurte Grego Natural", category: "Laticínios", unit: "UN", price: 6.9, cost: 3.2, stock: 27, min: 10, ncm: "0403.20.00", cfop: "", active: false },
+  { sku: "CAF-BRB-001", ean: "7891000315507", name: "Café Bourbon Special", category: "Cafés", unit: "UN", price: 42.9, cost: 24.9, stock: 45, min: 10, ncm: "0901.21.00", cfop: "5102", image: "/produtos/cafe-bourbon.jpg" },
+  { sku: "AZE-EXT-012", ean: "7891000100224", name: "Azeite Extra Virgem", category: "Despensa", unit: "UN", price: 58, cost: 31, stock: 8, min: 12, ncm: "1509.10.00", cfop: "5102", image: "/produtos/azeite-extra-virgem.jpg" },
+  { sku: "CHO-AMR-70", ean: "7891000244418", name: "Chocolate Amargo 70%", category: "Chocolates", unit: "UN", price: 18.5, cost: 9.8, stock: 0, min: 6, ncm: "1806.32.10", cfop: "5102", image: "/produtos/chocolate-amargo.jpg" },
+  { sku: "LEI-ORG-A2", ean: "7891000530012", name: "Leite Orgânico A2", category: "Laticínios", unit: "LT", price: 9.9, cost: 5.4, stock: 12, min: 6, ncm: "0401.20.10", cfop: "5102", image: "/produtos/leite-organico.jpg" },
+  { sku: "QUE-MIN-500", ean: "", name: "Queijo Minas Curado", category: "Frios", unit: "KG", price: 69.9, cost: 38, stock: 4.35, min: 2, ncm: "0406.90.20", cfop: "5102", image: "/produtos/queijo-minas.jpg" },
+  { sku: "IOG-GRE-100", ean: "7891000612345", name: "Iogurte Grego Natural", category: "Laticínios", unit: "UN", price: 6.9, cost: 3.2, stock: 27, min: 10, ncm: "0403.20.00", cfop: "", image: "/produtos/iogurte-grego.jpg", active: false },
 ]
 
 // [minutos atrás, itens [sku, qtd][], pagamento, cancelada?]
@@ -311,6 +312,7 @@ export function seedFor(storeId: string, now = Date.now()): StoreInventory {
       costCents: Math.round(seed.cost * 100),
       ncm: seed.ncm,
       cfop: seed.cfop,
+      image: seed.image,
       stock: roundQty(seed.stock + (sold.get(seed.sku) ?? 0)),
       minStock: seed.min,
       active: seed.active ?? true,

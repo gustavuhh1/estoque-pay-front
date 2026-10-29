@@ -36,6 +36,15 @@ function Clock24() {
   )
 }
 
+/** Foto do produto, ou um ícone quando ele não tem foto. */
+function ProductImage({ product, iconClass }: { product: Product; iconClass: string }) {
+  return product.image ? (
+    <img src={product.image} alt="" loading="lazy" className="h-full w-full object-cover" />
+  ) : (
+    <Package className={iconClass} />
+  )
+}
+
 function StockBadge({ product }: { product: Product }) {
   const out = product.stock <= 0
   const low = !out && product.stock <= product.minStock
@@ -229,8 +238,8 @@ export default function Pdv() {
                       onClick={() => add(product)}
                       className={`flex min-h-[72px] items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-left transition hover:border-[var(--color-green-500)]/50 ${out ? "cursor-not-allowed opacity-50" : ""}`}
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
-                        <Package className="h-[22px] w-[22px]" />
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
+                        <ProductImage product={product} iconClass="h-[22px] w-[22px]" />
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <strong className="truncate text-[15px]">{product.name}</strong>
@@ -257,8 +266,8 @@ export default function Pdv() {
                       onClick={() => add(product)}
                       className={`flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white text-left shadow-sm transition hover:border-[var(--color-green-500)]/50 ${out ? "cursor-not-allowed opacity-50" : ""}`}
                     >
-                      <span className="relative flex h-[104px] items-center justify-center bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
-                        <Package className="h-[34px] w-[34px]" />
+                      <span className="relative flex h-[104px] items-center justify-center overflow-hidden bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
+                        <ProductImage product={product} iconClass="h-[34px] w-[34px]" />
                         <span className="absolute left-2.5 top-2.5">
                           <StockBadge product={product} />
                         </span>
@@ -311,8 +320,8 @@ export default function Pdv() {
                 if (!product) return null
                 return (
                   <div key={line.productId} className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-paper)] px-3 py-2.5">
-                    <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
-                      <Package className="h-5 w-5" />
+                    <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
+                      <ProductImage product={product} iconClass="h-5 w-5" />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <strong className="truncate text-[13px]">{product.name}</strong>

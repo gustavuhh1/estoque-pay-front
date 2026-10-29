@@ -78,7 +78,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
 
   if (sale) {
     return (
-      <Dialog open onClose={() => finish(false)} title="Venda concluída" description={`NFC-e nº ${formatReceiptNumber(sale.number)} · ${formatBRL(sale.totalCents)}`} widthClass="max-w-[620px]">
+      <Dialog open onClose={() => finish(false)} title="Venda concluída" description={`NFC-e (simulado) nº ${formatReceiptNumber(sale.number)} · ${formatBRL(sale.totalCents)}`} widthClass="max-w-[620px]">
         <div className="flex flex-col gap-[18px]">
           <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] px-[18px] py-3.5 text-[var(--color-amber-dark)]">
             <Check className="h-[22px] w-[22px]" />
