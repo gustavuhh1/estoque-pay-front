@@ -4,6 +4,8 @@ Aplicação front-end em React + Vite + TypeScript + Tailwind CSS v4, mantendo o
 Scaffold inicial em React + Vite + TypeScript + Tailwind CSS v4 + componentes
 no padrão shadcn/ui.
 
+> **Fora do escopo desta entrega:** o login com Google foi cortado por causa do prazo. Veja [docs/ESCOPO-FORA.md](docs/ESCOPO-FORA.md).
+
 ## Rodando localmente
 
 ```bash
