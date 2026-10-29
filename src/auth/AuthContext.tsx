@@ -56,6 +56,8 @@ async function betterAuthSignOut() {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
+    // O servidor recusa JSON sem corpo (400): sem isso a sessão não é encerrada.
+    body: "{}",
   })
 }
 
