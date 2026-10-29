@@ -67,6 +67,18 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
         <span>QTD. TOTAL DE ITENS</span>
         <span>{sale.items.length}</span>
       </div>
+      {sale.discountCents ? (
+        <>
+          <div className="mt-1.5 flex justify-between text-[11px] text-[#333]">
+            <span>SUBTOTAL</span>
+            <span>{formatBRL(sale.totalCents + sale.discountCents)}</span>
+          </div>
+          <div className="flex justify-between text-[11px] text-[#333]">
+            <span>DESCONTO CUPOM {sale.couponCode}</span>
+            <span>-{formatBRL(sale.discountCents)}</span>
+          </div>
+        </>
+      ) : null}
       <div className="mt-1.5 flex items-baseline justify-between text-[#111]">
         <strong className="text-[13px]">TOTAL</strong>
         <strong className="text-xl">{formatBRL(sale.totalCents).replace(/ /g, " ")}</strong>

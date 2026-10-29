@@ -72,6 +72,9 @@ export type Sale = {
   /** Pagamento em dinheiro: valor entregue pelo cliente e troco devolvido. */
   receivedCents?: number
   changeCents?: number
+  /** Desconto de cupom aplicado sobre o subtotal dos itens. */
+  discountCents?: number
+  couponCode?: string
 }
 
 export type MovementType = "entrada" | "saida" | "ajuste" | "venda" | "cancelamento"
@@ -109,6 +112,8 @@ export type SaleInput = {
   cpf?: string
   customerName?: string
   receivedCents?: number
+  discountCents?: number
+  couponCode?: string
 }
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; error: string }
