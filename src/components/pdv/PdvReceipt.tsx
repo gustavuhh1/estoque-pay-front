@@ -23,7 +23,7 @@ type PdvReceiptProps = {
 
 /** Espelho do cupom exibido ao concluir a venda (layout do design system). */
 export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
-  const paid = sale.receivedCents ?? sale.totalCents
+  const paid = sale.receivedCents ?? sale.totalCents + (sale.pixFeeCents ?? 0)
 
   return (
     <div className={`print-receipt mx-auto w-[340px] max-w-full rounded-md border border-[var(--color-border)] bg-white px-5 py-[22px] shadow-sm ${mono}`}>
@@ -44,7 +44,7 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
             <br />
             (NÃO FISCAL)
             <br />
-            Venda nº {formatReceiptNumber(sale.number)}
+            Venda {sale.code ?? `nº ${formatReceiptNumber(sale.number)}`}
           </>
         ) : (
           <>
@@ -93,9 +93,15 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
           </div>
         </>
       ) : null}
+      {sale.pixFeeCents ? (
+        <div className="mt-1.5 flex justify-between text-[11px] text-[#333]">
+          <span>TAXA PIX (PAGA PELO CLIENTE)</span>
+          <span>{formatBRL(sale.pixFeeCents)}</span>
+        </div>
+      ) : null}
       <div className="mt-1.5 flex items-baseline justify-between text-[#111]">
         <strong className="text-[13px]">TOTAL</strong>
-        <strong className="text-xl">{formatBRL(sale.totalCents).replace(/ /g, " ")}</strong>
+        <strong className="text-xl">{formatBRL(sale.totalCents + (sale.pixFeeCents ?? 0)).replace(/ /g, " ")}</strong>
       </div>
       <div className={dash} />
       <div className="flex justify-between text-[11px] text-[#333]">
