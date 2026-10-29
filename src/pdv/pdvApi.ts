@@ -74,12 +74,16 @@ export type Espelho = {
 type ItemInput = { productId: string; quantity: number }
 const itens = (items: ItemInput[]) => items.map((item) => ({ produto_id: item.productId, quantidade: item.quantity }))
 
+/** Cliente e cupom da venda. O servidor valida o cupom (dono, uso e validade) ao cobrar. */
+export type BuyerInput = { customerId?: string; couponCode?: string }
+const buyer = (input?: BuyerInput) => ({ ...(input?.customerId ? { cliente_id: input.customerId } : {}), ...(input?.couponCode ? { cupom_codigo: input.couponCode } : {}) })
+
 // ---------- chamadas ----------
-export const payManual = (items: ItemInput[], method: ManualMethod, paid?: number) =>
-  api.post<ManualPayment>("/pagamento", { itens: itens(items), metodo_pagamento: method, ...(method === "DINHEIRO" ? { valor_pago: paid } : {}) })
+export const payManual = (items: ItemInput[], method: ManualMethod, paid?: number, who?: BuyerInput) =>
+  api.post<ManualPayment>("/pagamento", { itens: itens(items), metodo_pagamento: method, ...(method === "DINHEIRO" ? { valor_pago: paid } : {}), ...buyer(who) })
 
 /** A venda Pix nasce PENDENTE: só vira paga quando a API confirmar (webhook ou polling). */
-export const startPix = (items: ItemInput[]) => api.post<PixPayment>("/pagamento/pix", { itens: itens(items) })
+export const startPix = (items: ItemInput[], who?: BuyerInput) => api.post<PixPayment>("/pagamento/pix", { itens: itens(items), ...buyer(who) })
 
 export const pixStatus = (paymentId: string) => api.get<PixStatus>(`/pagamento/pix/${paymentId}/status`)
 
@@ -119,6 +123,42 @@ export const paymentOf = (method: string): PaymentMethod => METHODS[method] ?? "
 
 const toItems = (list: ApiItem[]): SaleItem[] =>
   list.map((item) => ({ productId: item.produto_id, name: item.produto_nome, sku: item.produto_id.slice(0, 8).toUpperCase(), quantity: item.quantidade, unitCents: cents(item.preco_unitario) }))
+
+/** Venda como a API a devolve na listagem e no histórico do cliente. */
+export type ApiVenda = {
+  id: string
+  total_venda: number
+  taxa_split?: number | null
+  metodo_pagamento: string
+  status_pagamento: "PENDENTE" | "PAGO" | "CANCELADO"
+  itens: ApiItem[]
+  criada_em: string
+  cancelada_em?: string | null
+  nfe_numero?: number | null
+  cliente_id?: string | null
+  desconto?: number | null
+  cupom_codigo?: string | null
+}
+
+export function vendaToSale(item: ApiVenda): Sale {
+  return {
+    id: item.id,
+    number: item.nfe_numero ?? 0,
+    code: item.id.slice(0, 8).toUpperCase(),
+    createdAt: Date.parse(item.criada_em),
+    items: toItems(item.itens),
+    totalCents: cents(item.total_venda),
+    payment: paymentOf(item.metodo_pagamento),
+    status: item.status_pagamento === "PAGO" ? "concluida" : item.status_pagamento === "CANCELADO" ? "cancelada" : "pendente",
+    ...(item.cancelada_em ? { canceledAt: Date.parse(item.cancelada_em) } : {}),
+    ...(item.taxa_split ? { pixFeeCents: cents(item.taxa_split) } : {}),
+    ...(item.cliente_id ? { customerId: item.cliente_id } : {}),
+    ...(item.desconto ? { discountCents: cents(item.desconto) } : {}),
+    ...(item.cupom_codigo ? { couponCode: item.cupom_codigo } : {}),
+    // Só há número de nota quando a NFC-e simulada foi emitida para a venda.
+    nfce: item.nfe_numero != null,
+  }
+}
 
 /** Venda paga em dinheiro ou cartão, pronta para o recibo não fiscal. */
 export function manualToSale(payment: ManualPayment, operator: string, nfce: boolean): Sale {

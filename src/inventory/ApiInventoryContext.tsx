@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 
 import { ApiError, api, errorMessage } from "@/lib/api"
 import { cents } from "@/lib/money"
-import { cancelSaleApi, paymentOf } from "@/pdv/pdvApi"
+import { cancelSaleApi, vendaToSale, type ApiVenda } from "@/pdv/pdvApi"
 import { InventoryContext, type InventoryContextValue } from "@/inventory/inventory-context"
 import { NO_CATEGORY, type Movement, type MoveInput, type Product, type ProductInput, type Result, type Sale, type StoreInventory, type Unit } from "@/inventory/types"
 import { useStores } from "@/store/useStores"
@@ -32,17 +32,6 @@ type ApiMovimentacao = {
   motivo: "REABASTECIMENTO" | "VENDA" | "ESTORNO_VENDA" | "DESCARTE" | "PERDA" | "VENCIMENTO" | "AJUSTE_MANUAL"
   observacao?: string | null
   criado_em: string
-}
-type ApiVenda = {
-  id: string
-  total_venda: number
-  taxa_split?: number | null
-  metodo_pagamento: string
-  status_pagamento: "PENDENTE" | "PAGO" | "CANCELADO"
-  itens: { produto_id: string; produto_nome: string; quantidade: number; preco_unitario: number }[]
-  criada_em: string
-  cancelada_em?: string | null
-  nfe_numero?: number | null
 }
 type Raw = { produtos: ApiProduto[]; categorias: ApiCategoria[]; movimentacoes: ApiMovimentacao[]; vendas: ApiVenda[] }
 
@@ -103,26 +92,7 @@ function build(raw: Raw): StoreInventory {
       }
     })
 
-  const sales: Sale[] = raw.vendas.map((item) => ({
-    id: item.id,
-    number: item.nfe_numero ?? 0,
-    code: item.id.slice(0, 8).toUpperCase(),
-    createdAt: Date.parse(item.criada_em),
-    items: item.itens.map((line) => ({
-      productId: line.produto_id,
-      name: line.produto_nome,
-      sku: line.produto_id.slice(0, 8).toUpperCase(),
-      quantity: line.quantidade,
-      unitCents: cents(line.preco_unitario),
-    })),
-    totalCents: cents(item.total_venda),
-    payment: paymentOf(item.metodo_pagamento),
-    status: item.status_pagamento === "PAGO" ? "concluida" : item.status_pagamento === "CANCELADO" ? "cancelada" : "pendente",
-    ...(item.cancelada_em ? { canceledAt: Date.parse(item.cancelada_em) } : {}),
-    ...(item.taxa_split ? { pixFeeCents: cents(item.taxa_split) } : {}),
-    // Só há número de nota quando a NFC-e simulada foi emitida para a venda.
-    nfce: item.nfe_numero != null,
-  }))
+  const sales: Sale[] = raw.vendas.map(vendaToSale)
 
   return { products, sales, movements, categories: raw.categorias.map((categoria) => categoria.nome) }
 }

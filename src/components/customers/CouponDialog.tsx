@@ -4,17 +4,22 @@ import { useState, type FormEvent } from "react"
 import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import type { Coupon } from "@/customers/coupons"
+import { config } from "@/config"
+import { couponDiscountLabel, type Coupon } from "@/customers/coupons"
 import type { Customer } from "@/customers/customers"
+import type { CouponDiscount } from "@/customers/useCustomers"
+import type { Result } from "@/inventory/types"
+import { parseMoneyToCents } from "@/lib/format"
 
 const PERCENTS = [5, 10, 15, 20, 25]
 
 type CouponDialogProps = {
   customers: Customer[]
   initialCustomerId?: string
-  /** Emite o cupom. Devolve o cupom criado ou null se não foi possível salvar. */
-  onIssue: (customerId: string, percent: number) => Coupon | null
+  /** Emite o cupom (percentual no modo demonstração, valor fixo em reais com a API). */
+  onIssue: (customerId: string, discount: CouponDiscount) => Promise<Result<Coupon>>
   onClose: () => void
 }
 
@@ -22,15 +27,22 @@ type CouponDialogProps = {
 export default function CouponDialog({ customers, initialCustomerId, onIssue, onClose }: CouponDialogProps) {
   const [customerId, setCustomerId] = useState(initialCustomerId ?? customers[0]?.id ?? "")
   const [percent, setPercent] = useState(10)
+  const [value, setValue] = useState("")
+  const [busy, setBusy] = useState(false)
   const [issued, setIssued] = useState<Coupon | null>(null)
   const [error, setError] = useState("")
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
     if (!customerId) return setError("Cadastre um cliente antes de emitir um cupom.")
-    const coupon = onIssue(customerId, percent)
-    if (!coupon) return setError("Não foi possível salvar o cupom neste navegador.")
-    setIssued(coupon)
+    const cents = config.useApi ? parseMoneyToCents(value) : null
+    if (config.useApi && (cents === null || cents <= 0)) return setError("Informe o valor do desconto em reais (ex.: 5,00).")
+    setBusy(true)
+    setError("")
+    const result = await onIssue(customerId, cents !== null ? { valueCents: cents } : { percent })
+    setBusy(false)
+    if (!result.ok) return setError(result.error)
+    setIssued(result.value)
   }
 
   const customer = customers.find((item) => item.id === customerId)
@@ -44,7 +56,7 @@ export default function CouponDialog({ customers, initialCustomerId, onIssue, on
             <span className="text-[15px] font-bold">Cupom emitido para {customer?.name}.</span>
           </div>
           <div className="rounded-2xl border border-dashed border-[var(--color-green-500)] bg-white px-5 py-6 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]">{issued.percent}% de desconto</p>
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]">{couponDiscountLabel(issued)} de desconto</p>
             <p className="mt-2 font-[family-name:var(--font-mono)] text-3xl font-bold tracking-[0.08em]" data-testid="coupon-code">
               {issued.code}
             </p>
@@ -67,15 +79,21 @@ export default function CouponDialog({ customers, initialCustomerId, onIssue, on
               ))}
             </Select>
           </Field>
-          <Field id="coupon-percent" label="Desconto">
-            <Select id="coupon-percent" value={percent} onChange={(event) => setPercent(Number(event.target.value))}>
-              {PERCENTS.map((value) => (
-                <option key={value} value={value}>
-                  {value}%
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {config.useApi ? (
+            <Field id="coupon-value" label="Desconto (R$)" hint="Valor fixo abatido do total da venda. Nunca passa do total.">
+              <Input id="coupon-value" value={value} onChange={(event) => setValue(event.target.value)} inputMode="decimal" placeholder="5,00" />
+            </Field>
+          ) : (
+            <Field id="coupon-percent" label="Desconto">
+              <Select id="coupon-percent" value={percent} onChange={(event) => setPercent(Number(event.target.value))}>
+                {PERCENTS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}%
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           {error && (
             <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
               {error}
@@ -85,7 +103,7 @@ export default function CouponDialog({ customers, initialCustomerId, onIssue, on
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="accent" disabled={customers.length === 0}>
+            <Button type="submit" variant="accent" disabled={customers.length === 0 || busy}>
               <Ticket className="h-4 w-4" />
               Emitir cupom
             </Button>
