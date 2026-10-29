@@ -1,0 +1,4 @@
+import { CircleHelp } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+export default function NotFound() { return <div className="flex min-h-screen items-center justify-center bg-[var(--color-paper)] px-5 py-10"><div className="w-full max-w-xl text-center"><span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-paper-dim)] text-[var(--color-ink)]"><CircleHelp className="h-6 w-6" /></span><p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-amber-dark)]">404</p><h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Página não encontrada.</h1><p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">O endereço não corresponde a nenhuma tela disponível no EstoquePay.</p><Button asChild className="mt-7" variant="accent"><Link to="/">Voltar ao início</Link></Button></div></div> }
