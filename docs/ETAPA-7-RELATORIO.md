@@ -18,7 +18,7 @@
 | ⏸️ BLOQUEADO | 4 |
 | ➖ FORA DO ESCOPO | 1 |
 
-† Verificado na build local com as correções do PR #59 (mesma API hospedada); precisa ser repetido no site publicado depois do deploy dessas correções.
+As correções do PR #59 foram repetidas no **site publicado** depois do deploy de 5356220: logout, menu e rotas do Caixa e tela de erro de conexão passaram. As linhas "antes da correção" registram o que foi visto no primeiro deploy (c049f5c).
 
 ## O que foi encontrado
 ### Defeitos do front (corrigidos no PR #59)
@@ -57,7 +57,7 @@
 | ✅ PASSOU | Encerrar sessão volta para a tela de login | caminho /login |
 | ✅ PASSOU | Login pela tela entra no sistema | caminho /painel |
 | ✅ PASSOU | Sessão expirada (cookie apagado) leva ao login ao usar o sistema | caminho /login |
-| ✅ PASSOU | Logout encerra a sessão no servidor e a rota protegida volta para o login (versão corrigida) † | get-session null; /painel → /login |
+| ✅ PASSOU | Logout encerra a sessão no servidor e a rota protegida volta para o login (versão corrigida) | get-session null; /painel → /login |
 | ❌ FALHOU | Logout encerra a sessão (site publicado, antes da correção) | O front mandava JSON sem corpo; o servidor respondia 400 FST_ERR_CTP_EMPTY_JSON_BODY e o get-session seguia válido: a tela deslogava, mas ao recarregar a pessoa voltava logada. Corrigido no PR #59. |
 | ➖ FORA DO ESCOPO | Login com Google | Cortado por decisão do dono por causa do prazo (docs/ESCOPO-FORA.md). |
 
@@ -87,7 +87,7 @@
 | ✅ PASSOU | Usuário em duas lojas com papéis diferentes (Gestor na A, Owner na C) | GET /estabelecimento 200, inclui A: true, inclui C: true |
 | ✅ PASSOU | Troca de contexto: na C o usuário é Owner e atribui Gestor; na A é Gestor e não pode | loja C 202; loja A 403 |
 | ✅ PASSOU | Isolamento: Caixa da loja A não acessa a loja C pelo header | HTTP 403 {"code":"TENANT_ACCESS_DENIED","message":"Você não tem vínculo com este estabelecimento.","requestId":"req-yd"} |
-| ✅ PASSOU | Tela de seleção lista as lojas do usuário | SEUS ESTABELECIMENTOS \| Onde você quer trabalhar hoje? \| Selecione uma loja para abrir o Dashboard no contexto correto. \| Nova loja \| Ativa \| Loja A 01711 \| 39.920.974/0001-29 \| Gestor \| Abrir Dashboard \| Loja B 01711 \| 17.534.885/0001-01 \| Gestor \| Abrir Dash |
+| ✅ PASSOU | Tela de seleção lista as lojas do usuário | SEUS ESTABELECIMENTOS \| Onde você quer trabalhar hoje? \| Selecione uma loja para abrir o Dashboard no contexto correto. \| Nova loja \| Loja A 01711 \| 39.920.974/0001-29 \| Gestor \| Abrir Dashboard \| Loja B 01711 \| 17.534.885/0001-01 \| Gestor \| Abrir Dashboard \|  |
 | ✅ PASSOU | Troca de loja pela tela muda o papel exibido (Owner na C, Gestor na A) | loja C → Gestor Etapa7 \| OWNER \| ENCERRAR SESSÃO \| ESTOQUEPAY V1.02.4; loja A → estor Etapa7 \| GESTOR \| ENCERRAR SESSÃO \| ESTOQUEPAY V1.02.4 |
 
 ### 5. Equipe e papéis (RN02, RN03, RN06; Caixa só vê o PDV)
@@ -108,10 +108,10 @@
 | ✅ PASSOU | Caixa não lista produtos do estoque (403) | HTTP 403 {"code":"ROLE_CANNOT_MANAGE_PRODUCTS","message":"Usuários com o cargo Caixa não podem gerenciar produtos.","requestId":"req-13c"} |
 | ✅ PASSOU | Caixa usa a busca do PDV | HTTP 200, 1 resultado(s) |
 | ✅ PASSOU | Na tela, o Gestor só vê o cargo Caixa ao adicionar membro | opções do cargo: Caixa |
-| ✅ PASSOU | Caixa que abre /estoque pela URL é barrado † | caminho /403; texto:  |
+| ✅ PASSOU | Caixa que abre /estoque pela URL é barrado | caminho /403; texto:  |
 | ✅ PASSOU | Caixa que abre /ajustes pela URL | caminho /403; texto:  |
 | ✅ PASSOU | Funcionário removido perde o acesso na hora (RN06) | antes 200; remoção 204; logo depois 401 UNAUTHORIZED; a loja some da lista dele: true |
-| ⚠️ DIVERGENTE | Caixa só vê o PDV no menu † | Depois da correção o menu do Caixa mostra PDV e Vendas (consulta), sem Painel, Estoque, Clientes nem Ajustes; as telas bloqueadas dão /403 pela URL. O plano diz só PDV; Vendas ficou por decisão das fases de design (o Caixa consulta e o Gestor abre e fecha o caixa). |
+| ⚠️ DIVERGENTE | Caixa só vê o PDV no menu | No site publicado (deploy 5356220) o menu do Caixa mostra PDV e Vendas (consulta), sem Painel, Estoque, Clientes nem Ajustes; as telas bloqueadas dão /403 pela URL. O plano diz só PDV; Vendas ficou por decisão das fases de design (o Caixa consulta e o Gestor abre e fecha o caixa). |
 | ❌ FALHOU | Caixa só vê o PDV: menu e rotas (site publicado, antes da correção) | O menu do Caixa mostrava Painel, PDV, Estoque, Clientes, Vendas e Ajustes e /estoque abria pela URL (só /ajustes dava 403). Corrigido no PR #59. |
 
 ### 6. Produtos: CRUD, EAN duplicado, exclusão lógica e definitiva, switch fiscal
@@ -230,7 +230,7 @@
 | ✅ PASSOU | 404 para recurso inexistente | HTTP 404 {"code":"ROUTE_NOT_FOUND","message":"Rota GET /produto/00000000-0000-4000-8000-000000000000 não encontrada.","requestId":"req-16m"} |
 | ✅ PASSOU | 400 de validação com detalhes por campo | HTTP 400 {"code":"VALIDATION_ERROR","message":"Erro de validação.","details":{"issues":[{"field":"nome","message":"O nome do produto é obrigatório."},{"field":"preco_cus |
 | ✅ PASSOU | Página 404 para rota inexistente | 404 \| Página não encontrada. \| O endereço não corresponde a nenhuma tela disponível no EstoquePay. \| Voltar ao início |
-| ✅ PASSOU | API fora do ar mostra a tela de erro de rede † | caminho /painel; texto: Não foi possível conectar ao servidor \| Confira sua conexão. Se estiver tudo certo, o servidor pode estar iniciando ou fora do ar: tente de novo em instantes. \| Tentar de novo |
+| ✅ PASSOU | API fora do ar mostra a tela de erro de rede | caminho /painel; texto: Não foi possível conectar ao servidor \| Confira sua conexão. Se estiver tudo certo, o servidor pode estar iniciando ou fora do ar: tente de novo em instantes. \| Tentar de novo |
 | ❌ FALHOU | API fora do ar mostra a tela de erro de rede (site publicado, antes da correção) | Com /api bloqueada, o front mandava para /login em vez de mostrar o erro de conexão. Corrigido no PR #59. |
 | ℹ️ OBSERVAÇÃO | Cold start da hospedagem | Não dá para forçar sob demanda. Nas rodadas de hoje a Render respondeu em cerca de 1 s (instância já acordada). A tela "Verificando sua sessão..." traz o aviso de que o servidor gratuito hiberna e a primeira abertura pode levar cerca de 1 minuto; o limite de espera das chamadas é de 90 s. |
 
