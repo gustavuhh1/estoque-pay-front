@@ -1,7 +1,9 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react"
 import { ArrowLeft, Boxes, CheckCircle2, KeyRound, ShieldAlert } from "lucide-react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { resetPassword } from "@/auth/passwordApi"
 import { Card } from "@/components/ui/card"
+import { config } from "@/config"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,13 +11,17 @@ import { Label } from "@/components/ui/label"
 export default function ResetPassword() {
   const [params] = useSearchParams()
   const token = params.get("token")
-  const validToken = useMemo(() => token !== "expired" && token !== "invalid", [token])
+  // Com o servidor, o link do e-mail volta com ?error=INVALID_TOKEN quando o token venceu ou já foi usado.
+  const validToken = useMemo(() => (config.authUrl ? Boolean(token) && !params.get("error") : token !== "expired" && token !== "invalid"), [params, token])
+  const [invalidated, setInvalidated] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [saved, setSaved] = useState(false)
   const navigate = useNavigate()
 
-  if (!validToken) {
+  if (!validToken || invalidated) {
     return (
       <AuthShell title="Link expirado ou inválido">
         <div className="text-center">
@@ -34,16 +40,24 @@ export default function ResetPassword() {
         <div className="text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"><CheckCircle2 className="h-6 w-6" /></span>
           <h1 className="mt-5 font-[family-name:var(--font-display)] text-2xl font-semibold">Tudo certo.</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">A próxima etapa do backend será concluir a troca da credencial. No protótipo, o fluxo pode seguir para o login.</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">{config.authUrl ? "Sua senha foi alterada. Entre com a nova senha." : "A próxima etapa do backend será concluir a troca da credencial. No protótipo, o fluxo pode seguir para o login."}</p>
           <Button className="mt-6" variant="accent" onClick={() => navigate("/login", { replace: true })}>Voltar para o login</Button>
         </div>
       </AuthShell>
     )
   }
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (password.length >= 8 && password === confirm) setSaved(true)
+    if (password.length < 8 || password !== confirm) return
+    if (!config.authUrl) return setSaved(true)
+    setBusy(true)
+    setError("")
+    const result = await resetPassword(token ?? "", password)
+    setBusy(false)
+    if (result.ok) return setSaved(true)
+    if (result.invalidToken) return setInvalidated(true)
+    setError(result.error)
   }
 
   return (
@@ -51,11 +65,12 @@ export default function ResetPassword() {
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-paper)]"><KeyRound className="h-5 w-5" /></div>
       <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Defina sua nova senha</h1>
       <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">Use pelo menos 8 caracteres e repita a senha para confirmar.</p>
-      <form onSubmit={submit} className="mt-8 space-y-5">
+      <form onSubmit={(event) => void submit(event)} className="mt-8 space-y-5">
         <div className="space-y-2"><Label htmlFor="new-password">Nova senha</Label><Input id="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required /></div>
         <div className="space-y-2"><Label htmlFor="confirm-password">Confirmar senha</Label><Input id="confirm-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={8} required /></div>
         {password && confirm && password !== confirm && <p className="text-xs font-medium text-[var(--color-alert)]">As senhas precisam ser iguais.</p>}
-        <Button type="submit" className="w-full" size="lg" variant="accent">Redefinir senha</Button>
+        {error && <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">{error}</p>}
+        <Button type="submit" className="w-full" size="lg" variant="accent" disabled={busy}>{busy ? "Salvando..." : "Redefinir senha"}</Button>
       </form>
     </AuthShell>
   )

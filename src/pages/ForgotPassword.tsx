@@ -1,8 +1,10 @@
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import { ArrowLeft, Boxes, KeyRound, Mail, Send } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
+import { requestPasswordReset } from "@/auth/passwordApi"
 import { Button } from "@/components/ui/button"
+import { config } from "@/config"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { BarcodeStrip } from "@/components/BarcodeStrip"
@@ -10,6 +12,20 @@ import { BarcodeStrip } from "@/components/BarcodeStrip"
 export default function ForgotPassword() {
   const navigate = useNavigate()
   const [sent, setSent] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    // Sem servidor configurado (demonstração) o fluxo segue só como protótipo.
+    if (!config.authUrl) return setSent(true)
+    setBusy(true)
+    setError("")
+    const failure = await requestPasswordReset(String(new FormData(event.currentTarget).get("email") ?? "").trim())
+    setBusy(false)
+    if (failure) return setError(failure)
+    setSent(true)
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-paper)] md:grid md:grid-cols-2">
@@ -56,12 +72,18 @@ export default function ForgotPassword() {
                   <Send className="h-5 w-5" />
                 </div>
                 <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Instruções enviadas</h1>
-                <p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">
-                  Nesta etapa de protótipo, o botão abaixo representa o link que chegaria por e-mail.
-                </p>
-                <Button className="mt-7 w-full" size="lg" variant="accent" onClick={() => navigate("/redefinir-senha?token=demo")}>
-                  Abrir fluxo de redefinição
-                </Button>
+                {config.authUrl ? (
+                  <p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">
+                    Se existir uma conta com este e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora. Confira também a caixa de spam.
+                  </p>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">Nesta etapa de protótipo, o botão abaixo representa o link que chegaria por e-mail.</p>
+                    <Button className="mt-7 w-full" size="lg" variant="accent" onClick={() => navigate("/redefinir-senha?token=demo")}>
+                      Abrir fluxo de redefinição
+                    </Button>
+                  </>
+                )}
                 <Link className="mt-5 inline-block text-xs font-semibold text-[var(--color-ink)] hover:underline" to="/login">
                   Voltar ao login
                 </Link>
@@ -76,7 +98,7 @@ export default function ForgotPassword() {
                   Informe o e-mail da conta para receber as instruções de recuperação.
                 </p>
 
-                <form className="mt-8 space-y-5" onSubmit={(event) => { event.preventDefault(); setSent(true) }}>
+                <form className="mt-8 space-y-5" onSubmit={(event) => void submit(event)}>
                   <div className="space-y-2">
                     <Label htmlFor="recovery-email">E-mail</Label>
                     <div className="relative">
@@ -84,7 +106,12 @@ export default function ForgotPassword() {
                       <Input id="recovery-email" name="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" required />
                     </div>
                   </div>
-                  <Button type="submit" size="lg" variant="accent" className="w-full">Enviar instruções</Button>
+                  {error && (
+                    <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
+                      {error}
+                    </p>
+                  )}
+                  <Button type="submit" size="lg" variant="accent" className="w-full" disabled={busy}>{busy ? "Enviando..." : "Enviar instruções"}</Button>
                 </form>
               </>
             )}
