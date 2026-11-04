@@ -4,7 +4,7 @@
 - **Site:** https://estoquepay.vercel.app
 - **Saúde da API (pelo proxy do site):** https://estoquepay.vercel.app/api/health → `{"status":"ok"}`
 - **Documentação da API (Swagger):** https://estoquepay.vercel.app/api/apidocs
-- **API direta:** https://estoquepay-api-csob.onrender.com
+- **API direta:** https://estoque-pay-api.onrender.com
 
 ## Contas de apresentação (loja "Mercadinho Ponto Certo", plano Free)
 | Papel | E-mail | Senha |
