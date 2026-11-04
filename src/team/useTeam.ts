@@ -7,7 +7,7 @@ import type { StoreRole } from "@/store/store-context"
 import { createInvite, readMembers, writeMembers, type Member } from "@/team/team"
 
 type ApiRole = "ADMIN" | "OWNER" | "MANAGER" | "CASHIER"
-type ApiMembro = { id: string; userId: string; nome?: string | null; email: string; role: ApiRole; criadoEm?: string | null }
+type ApiMembro = { id: string; userId: string; nome?: string | null; email: string; foto?: string | null; role: ApiRole; criadoEm?: string | null }
 type ApiConvite = { id: string; email: string; role: Exclude<ApiRole, "ADMIN">; criadoEm: string }
 type ApiEquipe = { membros: ApiMembro[]; convitesPendentes: ApiConvite[] }
 
@@ -22,6 +22,7 @@ function fromApi(data: ApiEquipe): Member[] {
     role: FROM_API[item.role],
     linkedAt: item.criadoEm ? Date.parse(item.criadoEm) : 0,
     status: "ativo",
+    photo: item.foto ?? null,
   }))
   const invites: Member[] = data.convitesPendentes.map((item) => ({
     id: item.id,

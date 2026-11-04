@@ -31,6 +31,7 @@ Acesse http://localhost:5173. Com `VITE_API_URL` vazio o front roda em modo demo
 | `/painel` | Dashboard (vendas, lucro, reposição) | Owner e Gestor |
 | `/pdv` | Ponto de venda | Todos os cargos |
 | `/vendas` | Histórico, cancelamento e abertura e fechamento do caixa | Todos os cargos (só Owner e Gestor cancelam) |
+| `/perfil` | Meu perfil: nome, foto (enviada ou do Google), lojas e formas de login | Todos os cargos |
 | `/estoque`, `/clientes`, `/ajustes` | Estoque, CRM, equipe, fiscal e assinatura | Owner e Gestor |
 | `/403`, `/erro-rede`, `*` | Sem permissão, erro de conexão e 404 | — |
 

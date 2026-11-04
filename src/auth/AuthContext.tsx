@@ -230,6 +230,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true
   }, [])
 
+  const patchDemoUser = useCallback((patch: { name?: string; image?: string | null }) => {
+    const current = readDemoSession()
+    if (!current) return
+    const next: UserSession = { ...current, user: { ...current.user, ...patch } }
+    localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(next))
+    setSession(next)
+  }, [])
+
   const signOut = useCallback(async () => {
     if (isBetterAuthConfigured) {
       try {
@@ -256,8 +264,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle,
       signOut,
       refreshSession,
+      patchDemoUser,
     }),
-    [connectionError, isLoading, refreshSession, session, signIn, signInWithGoogle, signOut, signUp],
+    [connectionError, isLoading, patchDemoUser, refreshSession, session, signIn, signInWithGoogle, signOut, signUp],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
