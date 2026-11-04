@@ -68,7 +68,7 @@ export default function ResetPassword() {
     <AuthShell backTo="/login" backLabel="Voltar para entrar" subtitle="Redefinição de senha">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Defina sua nova senha</h1>
-        <p className="mt-1.5 text-sm leading-6 text-[var(--color-slate)]">Use pelo menos 8 caracteres e repita a senha para confirmar.</p>
+        <p className="mt-1.5 text-[15px] font-medium leading-[1.55] text-[var(--color-slate)]">Use pelo menos 8 caracteres e repita a senha para confirmar.</p>
       </div>
       <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
         <div className="space-y-3">
@@ -81,7 +81,7 @@ export default function ResetPassword() {
         </div>
         {mismatch && <p className="text-xs font-medium text-[var(--color-alert)]">As senhas precisam ser iguais.</p>}
         {error && <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">{error}</p>}
-        <Button type="submit" className="h-12 w-full justify-start px-4 text-[17px]" variant="gradient" disabled={busy}>
+        <Button type="submit" className="h-9 w-full justify-start px-4 text-[17px]" variant="gradient" disabled={busy}>
           {busy ? "Salvando..." : "Redefinir senha"}
           {!busy && <ArrowRight />}
         </Button>

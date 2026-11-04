@@ -73,7 +73,7 @@ export default function Login() {
           </p>
         )}
 
-        <Button type="submit" variant="gradient" className="h-12 w-full justify-start px-4 text-[17px]" disabled={loading}>
+        <Button type="submit" variant="gradient" className="h-9 w-full justify-start px-4 text-[17px]" disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
           {!loading && <ArrowRight />}
         </Button>

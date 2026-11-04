@@ -60,7 +60,7 @@ export default function ForgotPassword() {
         <>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Recuperar senha</h1>
-            <p className="mt-1.5 text-sm leading-6 text-[var(--color-slate)]">Informe o e-mail da conta para receber o link de redefinição.</p>
+            <p className="mt-1.5 text-[15px] font-medium leading-[1.55] text-[var(--color-slate)]">Informe o e-mail da conta para receber o link de redefinição.</p>
           </div>
           <form className="flex flex-col gap-5" onSubmit={(event) => void submit(event)}>
             <div className="space-y-3">
@@ -75,7 +75,7 @@ export default function ForgotPassword() {
                 {error}
               </p>
             )}
-            <Button type="submit" variant="gradient" className="h-12 w-full justify-start px-4 text-[17px]" disabled={busy}>
+            <Button type="submit" variant="gradient" className="h-9 w-full justify-start px-4 text-[17px]" disabled={busy}>
               {busy ? "Enviando..." : "Enviar instruções"}
               {!busy && <ArrowRight />}
             </Button>

@@ -88,7 +88,7 @@ export default function Signup() {
             {error}
           </p>
         )}
-        <Button disabled={loading} type="submit" variant="gradient" className="h-12 w-full justify-start px-4 text-[17px]">
+        <Button disabled={loading} type="submit" variant="gradient" className="h-9 w-full justify-start px-4 text-[17px]">
           {loading ? "Criando..." : "Criar conta"}
           {!loading && <ArrowRight />}
         </Button>
@@ -101,10 +101,10 @@ export default function Signup() {
           Modo demonstração: a conta fica só neste navegador, com dados locais.
         </p>
       )}
-      <p className="text-xs leading-5 text-[var(--color-slate)]">
+      <p className="text-[13px] font-medium leading-[1.55] text-[var(--color-slate)]">
         Ao continuar, você concorda com os{" "}
-        <Link to="/termos" className="font-semibold text-[var(--color-amber)] hover:underline">Termos de Uso</Link> e a{" "}
-        <Link to="/privacidade" className="font-semibold text-[var(--color-amber)] hover:underline">Política de Privacidade</Link>.
+        <Link to="/termos" className="font-bold text-[var(--color-amber)] hover:underline">Termos de Uso</Link> e a{" "}
+        <Link to="/privacidade" className="font-bold text-[var(--color-amber)] hover:underline">Política de Privacidade</Link>.
       </p>
     </AuthShell>
   )

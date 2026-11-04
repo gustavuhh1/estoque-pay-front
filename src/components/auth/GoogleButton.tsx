@@ -31,7 +31,7 @@ export default function GoogleButton({ onError }: { onError: (message: string) =
           }
           setBusy(false)
         }}
-        className="flex h-12 w-full items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-4 text-[17px] font-bold text-[var(--color-ink)] shadow-[0_1px_2px_rgba(11,28,48,0.06)] transition-colors hover:bg-[var(--color-paper)] disabled:opacity-60"
+        className="flex h-9 w-full items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-white px-4 text-[17px] font-bold text-[var(--color-ink)] shadow-[0_1px_2px_rgba(11,28,48,0.06)] transition-colors hover:bg-[var(--color-paper)] disabled:opacity-60"
       >
         <img src={googleIcon} alt="" width={16} height={16} />
         {busy ? "Abrindo o Google..." : "Continuar com Google"}
