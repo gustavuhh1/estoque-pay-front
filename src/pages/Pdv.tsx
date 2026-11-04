@@ -20,7 +20,8 @@ import { useStores } from "@/store/useStores"
 type CartLine = { productId: string; quantity: number }
 type ViewMode = "blocos" | "lista"
 
-const STATUS = ["SEFAZ online", "Impressora conectada", "Leitor conectado"]
+// Sem SEFAZ: a NFC-e é simulada (D3).
+const STATUS = ["Impressora conectada", "Leitor conectado"]
 const label = "text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]"
 
 /** Passo do botão +/−: unidades inteiras ou décimos para produtos fracionados. */

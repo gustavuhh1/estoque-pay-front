@@ -2,7 +2,7 @@
 
 Front-end do EstoquePay em React 19 + Vite + TypeScript + Tailwind CSS v4, com componentes no padrão shadcn/ui. Publicado em https://estoquepay.vercel.app.
 
-Os requisitos e as regras de negócio ficam num documento só, no repositório da API: [`Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md`](https://github.com/gustavuhh1/estoque-pay-api/blob/main/docs/Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md). O login com Google está fora desta entrega (ver a seção "Fora do escopo" desse documento).
+Os requisitos e as regras de negócio ficam num documento só, no repositório da API: [`Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md`](https://github.com/gustavuhh1/estoque-pay-api/blob/main/docs/Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md). O login com Google aparece com `VITE_GOOGLE_LOGIN=true` e as chaves do Google configuradas na API.
 
 ## Rodando localmente
 
@@ -48,7 +48,7 @@ src/
 
 ## Design
 
-Tokens em `src/index.css` (verde `#006C4A` como cor principal, `#0D1C2E` para texto e navegação, `#C44848` para alertas). Tipografia: **Space Grotesk** nos títulos e **Inter** no corpo.
+Tokens em `src/index.css`, iguais às variáveis do Figma ([EstoquePay — Design System + App](https://www.figma.com/design/gG2uQFGCQpPMTtI4fsXXAP/)): verde `#006C49` como cor principal, `#0B1C30` para texto, `#F8F9FF` de fundo e `#DC2626` para alertas. Tipografia: **Manrope** em todo o texto e **JetBrains Mono** para códigos e números.
 
 ## Documentos
 

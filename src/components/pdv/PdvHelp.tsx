@@ -27,8 +27,8 @@ const TOPICS: Topic[] = [
     steps: [
       "Se a venda ainda não foi paga: toque em Limpar, no topo do carrinho.",
       "Se a venda já foi paga: abra o menu Vendas, toque na venda e depois em Cancelar.",
-      "O cancelamento da nota só é aceito pela SEFAZ até 30 minutos depois da emissão.",
-      "Depois desse prazo, faça a devolução pelo menu Vendas.",
+      "Só Owner e Gestor cancelam venda paga; os itens voltam ao estoque na hora.",
+      "A NFC-e simulada da venda continua registrada, sem valor fiscal.",
     ],
   },
   {

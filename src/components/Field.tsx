@@ -7,7 +7,7 @@ type FieldProps = { id: string; label: string; error?: string; hint?: string; ch
 /** Rótulo + controle + mensagem de erro. O controle deve usar `id` e `aria-describedby={`${id}-msg`}`. */
 export default function Field({ id, label, error, hint, children }: FieldProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <Label htmlFor={id}>{label}</Label>
       {children}
       {(error || hint) && (
