@@ -3,6 +3,7 @@ import { ArrowRight, Building2, Lock, Mail, UserRound } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
 import AuthShell, { AuthFooterLink } from "@/components/auth/AuthShell"
+import GoogleButton from "@/components/auth/GoogleButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -92,6 +93,8 @@ export default function Signup() {
           {!loading && <ArrowRight />}
         </Button>
       </form>
+
+      <GoogleButton onError={setError} />
 
       {!isBetterAuth && (
         <p className="rounded-xl bg-[var(--color-paper)] px-3 py-2 text-center text-[11px] leading-5 text-[var(--color-slate)]">

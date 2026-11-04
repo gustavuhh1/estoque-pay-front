@@ -53,6 +53,29 @@ async function betterAuthSignUp(name: string, email: string, password: string) {
   return response.ok
 }
 
+/**
+ * Pede ao Better Auth a URL de autorização do Google. Os retornos usam a origem atual (não o VITE_APP_URL), para o
+ * desenvolvimento local voltar ao próprio localhost; essa origem precisa estar nas origens confiáveis da API.
+ */
+async function betterAuthGoogleUrl() {
+  const origin = window.location.origin
+  const response = await fetch(`${betterAuthBaseUrl}/sign-in/social`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      provider: "google",
+      callbackURL: `${origin}/lojas`,
+      // Conta criada agora ainda não tem loja: segue direto para o onboarding.
+      newUserCallbackURL: `${origin}/onboarding`,
+      errorCallbackURL: `${origin}/login?erro=google`,
+    }),
+  })
+  if (!response.ok) return null
+  const payload = (await response.json()) as { url?: string }
+  return payload.url ?? null
+}
+
 async function betterAuthSignOut() {
   await fetch(`${betterAuthBaseUrl}/sign-out`, {
     method: "POST",
@@ -199,6 +222,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true
   }, [refreshSession])
 
+  const signInWithGoogle = useCallback(async () => {
+    if (!config.googleLogin) return false
+    const url = await betterAuthGoogleUrl()
+    if (!url) return false
+    window.location.assign(url)
+    return true
+  }, [])
+
   const signOut = useCallback(async () => {
     if (isBetterAuthConfigured) {
       try {
@@ -222,10 +253,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isBetterAuth: isBetterAuthConfigured,
       signIn,
       signUp,
+      signInWithGoogle,
       signOut,
       refreshSession,
     }),
-    [connectionError, isLoading, refreshSession, session, signIn, signOut, signUp],
+    [connectionError, isLoading, refreshSession, session, signIn, signInWithGoogle, signOut, signUp],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

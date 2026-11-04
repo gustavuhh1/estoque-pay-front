@@ -2,7 +2,7 @@
 
 Front-end do EstoquePay em React 19 + Vite + TypeScript + Tailwind CSS v4, com componentes no padrão shadcn/ui. Publicado em https://estoquepay.vercel.app.
 
-Os requisitos e as regras de negócio ficam num documento só, no repositório da API: [`Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md`](https://github.com/gustavuhh1/estoque-pay-api/blob/main/docs/Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md). O login com Google está fora desta entrega (ver a seção "Fora do escopo" desse documento).
+Os requisitos e as regras de negócio ficam num documento só, no repositório da API: [`Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md`](https://github.com/gustavuhh1/estoque-pay-api/blob/main/docs/Requisitos_e_Regras_de_Negocio_V5_EstoquePay.md). O login com Google aparece com `VITE_GOOGLE_LOGIN=true` e as chaves do Google configuradas na API.
 
 ## Rodando localmente
 

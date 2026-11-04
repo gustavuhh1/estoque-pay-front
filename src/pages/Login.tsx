@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { ArrowRight, Lock, Mail } from "lucide-react"
 
 import AuthShell, { AuthFooterLink } from "@/components/auth/AuthShell"
+import GoogleButton from "@/components/auth/GoogleButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +13,10 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isBetterAuth, signIn } = useAuth()
-  const [error, setError] = useState("")
+  // O Better Auth devolve para /login?erro=google quando o usuário cancela ou o Google recusa.
+  const [error, setError] = useState(() =>
+    new URLSearchParams(location.search).has("erro") ? "Não foi possível entrar com o Google. Tente de novo ou use e-mail e senha." : "",
+  )
   const [loading, setLoading] = useState(false)
   const from = (location.state as { from?: string } | null)?.from ?? "/painel"
 
@@ -74,6 +78,8 @@ export default function Login() {
           {!loading && <ArrowRight />}
         </Button>
       </form>
+
+      <GoogleButton onError={setError} />
 
       {!isBetterAuth && (
         <p className="rounded-xl bg-[var(--color-paper)] px-3 py-2 text-center text-[11px] leading-5 text-[var(--color-slate)]">

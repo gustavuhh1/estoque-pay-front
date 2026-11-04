@@ -44,5 +44,5 @@ Se uma dessas lojas for gasta nos testes (cancelar a assinatura, por exemplo), a
 ## O que dizer sobre os limites
 - A **NFC-e é simulada** (sem valor fiscal) e só existe no plano Premium; na loja Free o comprovante sai "sem valor fiscal".
 - O **Pix e a assinatura** usam a AbacatePay em modo de desenvolvimento (sem dinheiro real).
-- **Login com Google** ficou fora do escopo por causa do prazo (ver o documento de requisitos V5 da API, seção "Fora do escopo").
+- **Login com Google**: botão "Continuar com Google" no Login e no Cadastro; quem entra pela primeira vez cai no onboarding.
 - O relatório completo da validação em produção está em `docs/ETAPA-7-RELATORIO.md`.
