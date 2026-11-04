@@ -48,7 +48,7 @@ src/
 
 ## Design
 
-Tokens em `src/index.css` (verde `#006C4A` como cor principal, `#0D1C2E` para texto e navegação, `#C44848` para alertas). Tipografia: **Space Grotesk** nos títulos e **Inter** no corpo.
+Tokens em `src/index.css`, iguais às variáveis do Figma ([EstoquePay — Design System + App](https://www.figma.com/design/gG2uQFGCQpPMTtI4fsXXAP/)): verde `#006C49` como cor principal, `#0B1C30` para texto, `#F8F9FF` de fundo e `#DC2626` para alertas. Tipografia: **Manrope** em todo o texto e **JetBrains Mono** para códigos e números.
 
 ## Documentos
 

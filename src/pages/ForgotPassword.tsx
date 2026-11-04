@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react"
-import { ArrowLeft, Boxes, KeyRound, Mail, Send } from "lucide-react"
+import { ArrowRight, Mail, Send } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { requestPasswordReset } from "@/auth/passwordApi"
+import AuthShell, { AuthFooterLink } from "@/components/auth/AuthShell"
 import { Button } from "@/components/ui/button"
 import { config } from "@/config"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { BarcodeStrip } from "@/components/BarcodeStrip"
 
 export default function ForgotPassword() {
   const navigate = useNavigate()
@@ -17,7 +17,7 @@ export default function ForgotPassword() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // Sem servidor configurado (demonstração) o fluxo segue só como protótipo.
+    // Sem servidor configurado (demonstração), o envio é simulado.
     if (!config.authUrl) return setSent(true)
     setBusy(true)
     setError("")
@@ -28,103 +28,60 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-paper)] md:grid md:grid-cols-2">
-      <aside className="relative hidden overflow-hidden bg-[var(--color-ink)] text-white md:flex md:min-h-screen md:flex-col md:justify-between md:p-10 lg:p-12">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10">
-            <Boxes className="h-5 w-5 text-[var(--color-amber)]" />
+    <AuthShell
+      backTo="/login"
+      backLabel="Voltar para entrar"
+      subtitle="Recuperar o acesso à sua conta"
+      footer={sent ? undefined : <AuthFooterLink text="Lembrou da senha?" to="/login" label="Entrar" />}
+    >
+      {sent ? (
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]">
+            <Send className="h-5 w-5" />
           </div>
-          <span className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">EstoquePay</span>
-        </Link>
-
-        <div className="max-w-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-amber)]">Recuperar acesso</p>
-          <p className="mt-4 font-[family-name:var(--font-display)] text-3xl font-semibold leading-tight lg:text-4xl">
-            Você não precisa começar o cadastro novamente.
-          </p>
-          <p className="mt-5 text-sm leading-6 text-white/60">
-            Esta tela mantém o mesmo visual do Login e do Cadastro para o fluxo continuar consistente.
-          </p>
-        </div>
-
-        <BarcodeStrip className="opacity-30 invert" />
-      </aside>
-
-      <main className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 md:px-10 lg:px-16">
-        <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2.5 md:hidden">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-ink)]">
-                <Boxes className="h-5 w-5 text-[var(--color-amber)]" />
-              </div>
-              <span className="font-[family-name:var(--font-display)] text-lg font-semibold">EstoquePay</span>
-            </Link>
-            <Link to="/login" className="hidden items-center gap-2 text-xs text-[var(--color-slate)] transition-colors hover:text-[var(--color-ink)] md:flex">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Voltar para entrar
-            </Link>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--color-ink)]/10 bg-white p-6 shadow-[0_16px_50px_rgba(27,42,74,0.07)] sm:p-8">
-            {sent ? (
-              <div className="text-center">
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]">
-                  <Send className="h-5 w-5" />
-                </div>
-                <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Instruções enviadas</h1>
-                {config.authUrl ? (
-                  <p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">
-                    Se existir uma conta com este e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora. Confira também a caixa de spam.
-                  </p>
-                ) : (
-                  <>
-                    <p className="mt-3 text-sm leading-6 text-[var(--color-slate)]">Nesta etapa de protótipo, o botão abaixo representa o link que chegaria por e-mail.</p>
-                    <Button className="mt-7 w-full" size="lg" variant="accent" onClick={() => navigate("/redefinir-senha?token=demo")}>
-                      Abrir fluxo de redefinição
-                    </Button>
-                  </>
-                )}
-                <Link className="mt-5 inline-block text-xs font-semibold text-[var(--color-ink)] hover:underline" to="/login">
-                  Voltar ao login
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-paper)]">
-                  <KeyRound className="h-5 w-5 text-[var(--color-ink)]" />
-                </div>
-                <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">Recuperar senha</h1>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">
-                  Informe o e-mail da conta para receber as instruções de recuperação.
-                </p>
-
-                <form className="mt-8 space-y-5" onSubmit={(event) => void submit(event)}>
-                  <div className="space-y-2">
-                    <Label htmlFor="recovery-email">E-mail</Label>
-                    <div className="relative">
-                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]/70" />
-                      <Input id="recovery-email" name="email" type="email" placeholder="voce@sualoja.com.br" className="pl-9" required />
-                    </div>
-                  </div>
-                  {error && (
-                    <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
-                      {error}
-                    </p>
-                  )}
-                  <Button type="submit" size="lg" variant="accent" className="w-full" disabled={busy}>{busy ? "Enviando..." : "Enviar instruções"}</Button>
-                </form>
-              </>
-            )}
-          </div>
-
-          {!sent && (
-            <p className="mt-6 text-center text-sm text-[var(--color-slate)]">
-              Lembrou da senha?{" "}
-              <Link to="/login" className="font-semibold text-[var(--color-ink)] hover:underline">Voltar para o login</Link>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight">Instruções enviadas</h1>
+          {config.authUrl ? (
+            <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">
+              Se existir uma conta com este e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora. Confira também a caixa de spam.
             </p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm leading-6 text-[var(--color-slate)]">No modo demonstração, o botão abaixo faz o papel do link que chegaria por e-mail.</p>
+              <Button className="mt-6 h-12 w-full" variant="gradient" onClick={() => navigate("/redefinir-senha?token=demo")}>
+                Abrir redefinição de senha
+              </Button>
+            </>
           )}
+          <Link className="mt-5 inline-block text-xs font-extrabold uppercase tracking-[0.08em] text-[var(--color-amber)] hover:underline" to="/login">
+            Voltar ao login
+          </Link>
         </div>
-      </main>
-    </div>
+      ) : (
+        <>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Recuperar senha</h1>
+            <p className="mt-1.5 text-sm leading-6 text-[var(--color-slate)]">Informe o e-mail da conta para receber o link de redefinição.</p>
+          </div>
+          <form className="flex flex-col gap-5" onSubmit={(event) => void submit(event)}>
+            <div className="space-y-3">
+              <Label htmlFor="recovery-email">E-mail</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--color-slate)]" />
+                <Input id="recovery-email" name="email" type="email" placeholder="voce@sualoja.com.br" className="pl-11" required />
+              </div>
+            </div>
+            {error && (
+              <p role="alert" className="rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
+                {error}
+              </p>
+            )}
+            <Button type="submit" variant="gradient" className="h-12 w-full justify-start px-4 text-[17px]" disabled={busy}>
+              {busy ? "Enviando..." : "Enviar instruções"}
+              {!busy && <ArrowRight />}
+            </Button>
+          </form>
+        </>
+      )}
+    </AuthShell>
   )
 }
