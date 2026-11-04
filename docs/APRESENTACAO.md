@@ -35,7 +35,7 @@ Se uma dessas lojas for gasta nos testes (cancelar a assinatura, por exemplo), a
 1. **Painel** (Dono): vendas do dia, lucro, formas de pagamento, top vendidos e a lista de reposição.
 2. **Estoque:** alerta de reposição (Café e Leite abaixo do mínimo), categorias, produto vendido por quilo (queijo, 0,350 kg) e a auditoria das movimentações.
 3. **PDV:** venda em dinheiro com troco; depois uma venda **Pix**: o QR Code aparece com a taxa de R$ 0,80 já somada ao total, e o botão "Simular pagamento" confirma e baixa o estoque. Mostre também o cliente (Marina) e o cupom `FID-3Q7K-PUK4` abatendo R$ 5,00.
-4. **Vendas:** histórico, venda cancelada com estorno de estoque e fechamento do caixa.
+4. **Vendas:** histórico, venda cancelada com estorno de estoque e fechamento do caixa (qualquer cargo abre e fecha o caixa; só Owner e Gestor cancelam).
 5. **Clientes:** histórico de compras, produto favorito e cupons.
 6. **Ajustes:** Equipe (o Gestor só atribui o cargo Caixa), Fiscal (pré-check da NFC-e) e Assinatura (o botão leva ao checkout real da AbacatePay).
 7. **Controle por papel:** saia e entre como **Caixa**: o menu mostra só PDV e Vendas, e as outras telas dão "sem permissão".
@@ -44,5 +44,5 @@ Se uma dessas lojas for gasta nos testes (cancelar a assinatura, por exemplo), a
 ## O que dizer sobre os limites
 - A **NFC-e é simulada** (sem valor fiscal) e só existe no plano Premium; na loja Free o comprovante sai "sem valor fiscal".
 - O **Pix e a assinatura** usam a AbacatePay em modo de desenvolvimento (sem dinheiro real).
-- **Login com Google** ficou fora do escopo por causa do prazo (`docs/ESCOPO-FORA.md`).
+- **Login com Google** ficou fora do escopo por causa do prazo (ver o documento de requisitos V5 da API, seção "Fora do escopo").
 - O relatório completo da validação em produção está em `docs/ETAPA-7-RELATORIO.md`.

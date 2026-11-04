@@ -178,7 +178,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
             <span className="flex flex-col gap-1.5">
               <strong className="text-[15px]">Mostre o QR Code para o cliente</strong>
               <span className="text-[13px] text-[var(--color-slate)]">
-                A venda é aprovada sozinha assim que o Pix cair. Taxa fixa de R$ 0,80 retida no split.
+                A venda é aprovada sozinha assim que o Pix cair. O cliente paga a taxa fixa de R$ 0,80, já somada ao total.
               </span>
             </span>
           </div>

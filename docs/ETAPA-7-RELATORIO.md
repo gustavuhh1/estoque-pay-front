@@ -25,10 +25,11 @@ As correções do PR #59 foram repetidas no **site publicado** depois do deploy 
 2. **O Caixa via o menu inteiro e abria `/estoque`** (cenário 5): só Ajustes era barrado.
 3. **API fora do ar levava ao login** em vez da tela de erro de conexão (cenário 17).
 
-### Divergências entre o plano e a API (decisão do dono)
-- **Caixa abre e fecha o turno** (cenário 9): o plano diz só Owner e Gestor, mas a API deixa qualquer cargo, de propósito (`CaixaService`, #54). O front impede o Caixa na tela de Vendas, mas a regra não está no servidor.
-- **Produto já vendido pode ser excluído definitivamente** (cenário 6): `DELETE /produto/:id` devolve 204 mesmo com vendas. O histórico de vendas continua, porque o nome fica gravado na venda; só a inativação preserva o cadastro.
-- **Menu do Caixa:** o plano diz só PDV; o front mostra PDV e Vendas (consulta).
+### Divergências entre o plano e a API (resolvidas em 04/11/2026)
+As três foram decisões do dono e agora estão na V5 de requisitos; não são mais divergências.
+- **Caixa abre e fecha o turno** (cenário 9): qualquer cargo abre e fecha (RN04 da Fase 3, #54). O front também deixou de bloquear o Caixa na tela de Vendas.
+- **Produto já vendido pode ser excluído** (cenário 6): `DELETE /produto/:id` devolve 204; produto já vendido é marcado como excluído (`deletado_em`) e o histórico de vendas fica intacto (RF04.4 da Fase 2).
+- **Menu do Caixa:** PDV e Vendas (RN04 da Fase 1).
 
 ### Comportamentos da API que valem registro
 - Limites do Free respondem **409** (`PLANO_LIMITE_PRODUTOS`, `PLANO_LIMITE_MEMBROS`, `PLANO_RECURSO_PREMIUM`), não 403.
@@ -38,7 +39,7 @@ As correções do PR #59 foram repetidas no **site publicado** depois do deploy 
 ### Não validados ponta a ponta
 - **Pagamento real da assinatura:** o checkout da AbacatePay abre, mas não foi concluído com cartão de teste; as lojas Premium de teste usam estados gravados pelo script scripts/premium-teste.ts (mesmo resultado do webhook).
 - **Emissão fiscal real:** fora do escopo; a NFC-e é simulada.
-- **Login com Google:** fora do escopo (docs/ESCOPO-FORA.md).
+- **Login com Google:** fora do escopo (ver o documento de requisitos V5 da API, seção "Fora do escopo").
 
 ## Resultado por cenário
 
@@ -58,7 +59,7 @@ As correções do PR #59 foram repetidas no **site publicado** depois do deploy 
 | ✅ PASSOU | Sessão expirada (cookie apagado) leva ao login ao usar o sistema | caminho /login |
 | ✅ PASSOU | Logout encerra a sessão no servidor e a rota protegida volta para o login (versão corrigida) | get-session null; /painel → /login |
 | ❌ FALHOU | Logout encerra a sessão (site publicado, antes da correção) | O front mandava JSON sem corpo; o servidor respondia 400 FST_ERR_CTP_EMPTY_JSON_BODY e o get-session seguia válido: a tela deslogava, mas ao recarregar a pessoa voltava logada. Corrigido no PR #59. |
-| ➖ FORA DO ESCOPO | Login com Google | Cortado por decisão do dono por causa do prazo (docs/ESCOPO-FORA.md). |
+| ➖ FORA DO ESCOPO | Login com Google | Cortado por decisão do dono por causa do prazo (ver o documento de requisitos V5 da API, seção "Fora do escopo"). |
 
 ### 2. Esqueci a senha → e-mail (Brevo) → redefinição → novo login
 
