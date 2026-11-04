@@ -38,7 +38,7 @@ const timeFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: 
 export default function Sales() {
   const { activeStore } = useStores()
   const { sales, cancelSale } = useInventory()
-  // Cancelar venda e fechar o caixa são ações de Owner e Gestor; o Colaborador (caixa) só consulta.
+  // Cancelar venda é ação de Owner e Gestor. Abrir e fechar o caixa vale para qualquer cargo (API #54).
   const canManage = activeStore.role !== "Colaborador"
 
   const cashState = useCash()
@@ -120,12 +120,12 @@ export default function Sales() {
               Exportar CSV
             </Button>
             {shift ? (
-              <Button variant="outline" onClick={() => setCashDialog("close")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor fecham o caixa"}>
+              <Button variant="outline" onClick={() => setCashDialog("close")}>
                 <Lock className="h-4 w-4" />
                 Fechar caixa
               </Button>
             ) : (
-              <Button variant="accent" onClick={() => setCashDialog("open")} disabled={!canManage} title={canManage ? undefined : "Só Owner e Gestor abrem o caixa"}>
+              <Button variant="accent" onClick={() => setCashDialog("open")}>
                 <LockOpen className="h-4 w-4" />
                 Abrir caixa
               </Button>
@@ -136,7 +136,7 @@ export default function Sales() {
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={Banknote} label="Faturamento do turno" value={formatBRL(totals?.totalCents ?? 0)} badge={shift ? "Turno aberto" : "Caixa fechado"} tone={shift ? "brand" : "warning"} />
-        <MetricCard icon={QrCode} tone="info" label="Pix recebido" value={formatBRL(totals?.byMethod.pix ?? 0)} badge="Split R$ 0,80" />
+        <MetricCard icon={QrCode} tone="info" label="Pix recebido" value={formatBRL(totals?.byMethod.pix ?? 0)} badge="Taxa R$ 0,80 do cliente" />
         <MetricCard icon={FileText} tone="warning" label="NFC-e simuladas" value={`${simulated} ${simulated === 1 ? "nota" : "notas"}`} badge="Sem valor fiscal" />
         <MetricCard icon={RotateCcw} tone="danger" label="Cancelamentos" value={`${canceledCount} ${canceledCount === 1 ? "venda" : "vendas"}`} badge="Estornado" />
       </section>
@@ -147,7 +147,7 @@ export default function Sales() {
             tone="warning"
             title="Caixa fechado"
             description="O PDV só registra vendas com o caixa aberto. Abra o caixa para começar um novo turno."
-            actionLabel={canManage ? "Abrir caixa" : undefined}
+            actionLabel="Abrir caixa"
             onAction={() => setCashDialog("open")}
           />
         </div>
