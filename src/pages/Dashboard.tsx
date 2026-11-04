@@ -7,7 +7,7 @@ import PageHeader from "@/components/PageHeader"
 import Panel from "@/components/Panel"
 import { Button } from "@/components/ui/button"
 import { PERIOD_LABEL, dashboardMetrics, type Period } from "@/dashboard/metrics"
-import { formatBRL, formatDateTime, formatQuantity, formatSaleNumber } from "@/lib/format"
+import { formatBRL, formatDateTime, formatQuantity, saleLabel } from "@/lib/format"
 import { needsRestock, stockStatus, stockValueCents } from "@/inventory/logic"
 import { PAYMENT_LABELS, type MovementType, type PaymentMethod, type Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -224,7 +224,7 @@ export default function Dashboard() {
                     <span className="min-w-0 flex-1">
                       <strong className="block truncate">{sale.customerName ?? "Consumidor não identificado"}</strong>
                       <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
-                        {formatSaleNumber(sale.number)} · {timeOnly.format(sale.createdAt)} · {PAYMENT_LABELS[sale.payment].toUpperCase()}
+                        {saleLabel(sale)} · {timeOnly.format(sale.createdAt)} · {PAYMENT_LABELS[sale.payment].toUpperCase()}
                       </span>
                     </span>
                     <strong className={`tabular-nums ${done ? "" : "text-[var(--color-slate)] line-through"}`}>{formatBRL(sale.totalCents)}</strong>

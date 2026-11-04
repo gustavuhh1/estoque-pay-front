@@ -13,6 +13,9 @@ const buttonVariants = cva(
           "bg-[var(--color-ink)] text-white hover:bg-[var(--color-ink-light)]",
         accent:
           "bg-[var(--color-amber)] text-white hover:bg-[var(--color-amber-dark)] font-semibold",
+        // Figma "Gradient/Brand" + "Shadow/Brand": ação principal das telas de acesso.
+        gradient:
+          "rounded-xl bg-gradient-to-r from-[var(--color-amber)] to-[var(--color-green-400)] font-bold text-white shadow-[0_8px_20px_rgba(0,108,73,0.25)] hover:brightness-105",
         outline:
           "border border-[var(--color-ink)]/20 bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/5",
         ghost: "hover:bg-[var(--color-ink)]/5 text-[var(--color-ink)]",

@@ -18,6 +18,8 @@ export type AuthContextValue = {
   isBetterAuth: boolean
   signIn: (email: string, password: string) => Promise<boolean>
   signUp: (name: string, email: string, password: string) => Promise<boolean>
+  /** Leva ao Google; só resolve `false` quando o servidor não devolve a URL de autorização. */
+  signInWithGoogle: () => Promise<boolean>
   signOut: () => Promise<void>
   refreshSession: () => Promise<UserSession | null>
 }

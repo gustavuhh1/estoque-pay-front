@@ -11,14 +11,13 @@
 ## Resumo
 | Resultado | Quantidade |
 |---|---|
-| ✅ PASSOU | 92 |
+| ✅ PASSOU | 110 |
 | ⚠️ DIVERGENTE | 3 |
 | ❌ FALHOU | 3 |
-| ℹ️ OBSERVAÇÃO | 3 |
-| ⏸️ BLOQUEADO | 4 |
+| ℹ️ OBSERVAÇÃO | 5 |
 | ➖ FORA DO ESCOPO | 1 |
 
-† Verificado na build local com as correções do PR #59 (mesma API hospedada); precisa ser repetido no site publicado depois do deploy dessas correções.
+As correções do PR #59 foram repetidas no **site publicado** depois do deploy de 5356220: logout, menu e rotas do Caixa e tela de erro de conexão passaram. As linhas "antes da correção" registram o que foi visto no primeiro deploy (c049f5c).
 
 ## O que foi encontrado
 ### Defeitos do front (corrigidos no PR #59)
@@ -26,10 +25,11 @@
 2. **O Caixa via o menu inteiro e abria `/estoque`** (cenário 5): só Ajustes era barrado.
 3. **API fora do ar levava ao login** em vez da tela de erro de conexão (cenário 17).
 
-### Divergências entre o plano e a API (decisão do dono)
-- **Caixa abre e fecha o turno** (cenário 9): o plano diz só Owner e Gestor, mas a API deixa qualquer cargo, de propósito (`CaixaService`, #54). O front impede o Caixa na tela de Vendas, mas a regra não está no servidor.
-- **Produto já vendido pode ser excluído definitivamente** (cenário 6): `DELETE /produto/:id` devolve 204 mesmo com vendas. O histórico de vendas continua, porque o nome fica gravado na venda; só a inativação preserva o cadastro.
-- **Menu do Caixa:** o plano diz só PDV; o front mostra PDV e Vendas (consulta).
+### Divergências entre o plano e a API (resolvidas em 04/11/2026)
+As três foram decisões do dono e agora estão na V5 de requisitos; não são mais divergências.
+- **Caixa abre e fecha o turno** (cenário 9): qualquer cargo abre e fecha (RN04 da Fase 3, #54). O front também deixou de bloquear o Caixa na tela de Vendas.
+- **Produto já vendido pode ser excluído** (cenário 6): `DELETE /produto/:id` devolve 204; produto já vendido é marcado como excluído (`deletado_em`) e o histórico de vendas fica intacto (RF04.4 da Fase 2).
+- **Menu do Caixa:** PDV e Vendas (RN04 da Fase 1).
 
 ### Comportamentos da API que valem registro
 - Limites do Free respondem **409** (`PLANO_LIMITE_PRODUTOS`, `PLANO_LIMITE_MEMBROS`, `PLANO_RECURSO_PREMIUM`), não 403.
@@ -37,9 +37,9 @@
 - Cadastro, login e redefinição de senha têm limite de 3 requisições a cada 10 s no Better Auth (usuários reais não chegam lá; testes automáticos sim).
 
 ### Não validados ponta a ponta
-- Cenários 14, 15 e 16 dependem de uma **loja Premium de teste** (checkout da AbacatePay em modo dev e webhook). O front já leva ao checkout; falta o pós-pagamento.
-- Cenário 6 (switch fiscal ligado sem NCM/CFOP) também exige Premium.
-- Login com Google: fora do escopo (`docs/ESCOPO-FORA.md`).
+- **Pagamento real da assinatura:** o checkout da AbacatePay abre, mas não foi concluído com cartão de teste; as lojas Premium de teste usam estados gravados pelo script scripts/premium-teste.ts (mesmo resultado do webhook).
+- **Emissão fiscal real:** fora do escopo; a NFC-e é simulada.
+- **Login com Google:** fora do escopo (ver o documento de requisitos V5 da API, seção "Fora do escopo").
 
 ## Resultado por cenário
 
@@ -57,9 +57,9 @@
 | ✅ PASSOU | Encerrar sessão volta para a tela de login | caminho /login |
 | ✅ PASSOU | Login pela tela entra no sistema | caminho /painel |
 | ✅ PASSOU | Sessão expirada (cookie apagado) leva ao login ao usar o sistema | caminho /login |
-| ✅ PASSOU | Logout encerra a sessão no servidor e a rota protegida volta para o login (versão corrigida) † | get-session null; /painel → /login |
+| ✅ PASSOU | Logout encerra a sessão no servidor e a rota protegida volta para o login (versão corrigida) | get-session null; /painel → /login |
 | ❌ FALHOU | Logout encerra a sessão (site publicado, antes da correção) | O front mandava JSON sem corpo; o servidor respondia 400 FST_ERR_CTP_EMPTY_JSON_BODY e o get-session seguia válido: a tela deslogava, mas ao recarregar a pessoa voltava logada. Corrigido no PR #59. |
-| ➖ FORA DO ESCOPO | Login com Google | Cortado por decisão do dono por causa do prazo (docs/ESCOPO-FORA.md). |
+| ➖ FORA DO ESCOPO | Login com Google | Cortado por decisão do dono por causa do prazo (ver o documento de requisitos V5 da API, seção "Fora do escopo"). |
 
 ### 2. Esqueci a senha → e-mail (Brevo) → redefinição → novo login
 
@@ -87,7 +87,7 @@
 | ✅ PASSOU | Usuário em duas lojas com papéis diferentes (Gestor na A, Owner na C) | GET /estabelecimento 200, inclui A: true, inclui C: true |
 | ✅ PASSOU | Troca de contexto: na C o usuário é Owner e atribui Gestor; na A é Gestor e não pode | loja C 202; loja A 403 |
 | ✅ PASSOU | Isolamento: Caixa da loja A não acessa a loja C pelo header | HTTP 403 {"code":"TENANT_ACCESS_DENIED","message":"Você não tem vínculo com este estabelecimento.","requestId":"req-yd"} |
-| ✅ PASSOU | Tela de seleção lista as lojas do usuário | SEUS ESTABELECIMENTOS \| Onde você quer trabalhar hoje? \| Selecione uma loja para abrir o Dashboard no contexto correto. \| Nova loja \| Ativa \| Loja A 01711 \| 39.920.974/0001-29 \| Gestor \| Abrir Dashboard \| Loja B 01711 \| 17.534.885/0001-01 \| Gestor \| Abrir Dash |
+| ✅ PASSOU | Tela de seleção lista as lojas do usuário | SEUS ESTABELECIMENTOS \| Onde você quer trabalhar hoje? \| Selecione uma loja para abrir o Dashboard no contexto correto. \| Nova loja \| Loja A 01711 \| 39.920.974/0001-29 \| Gestor \| Abrir Dashboard \| Loja B 01711 \| 17.534.885/0001-01 \| Gestor \| Abrir Dashboard \|  |
 | ✅ PASSOU | Troca de loja pela tela muda o papel exibido (Owner na C, Gestor na A) | loja C → Gestor Etapa7 \| OWNER \| ENCERRAR SESSÃO \| ESTOQUEPAY V1.02.4; loja A → estor Etapa7 \| GESTOR \| ENCERRAR SESSÃO \| ESTOQUEPAY V1.02.4 |
 
 ### 5. Equipe e papéis (RN02, RN03, RN06; Caixa só vê o PDV)
@@ -108,10 +108,10 @@
 | ✅ PASSOU | Caixa não lista produtos do estoque (403) | HTTP 403 {"code":"ROLE_CANNOT_MANAGE_PRODUCTS","message":"Usuários com o cargo Caixa não podem gerenciar produtos.","requestId":"req-13c"} |
 | ✅ PASSOU | Caixa usa a busca do PDV | HTTP 200, 1 resultado(s) |
 | ✅ PASSOU | Na tela, o Gestor só vê o cargo Caixa ao adicionar membro | opções do cargo: Caixa |
-| ✅ PASSOU | Caixa que abre /estoque pela URL é barrado † | caminho /403; texto:  |
+| ✅ PASSOU | Caixa que abre /estoque pela URL é barrado | caminho /403; texto:  |
 | ✅ PASSOU | Caixa que abre /ajustes pela URL | caminho /403; texto:  |
 | ✅ PASSOU | Funcionário removido perde o acesso na hora (RN06) | antes 200; remoção 204; logo depois 401 UNAUTHORIZED; a loja some da lista dele: true |
-| ⚠️ DIVERGENTE | Caixa só vê o PDV no menu † | Depois da correção o menu do Caixa mostra PDV e Vendas (consulta), sem Painel, Estoque, Clientes nem Ajustes; as telas bloqueadas dão /403 pela URL. O plano diz só PDV; Vendas ficou por decisão das fases de design (o Caixa consulta e o Gestor abre e fecha o caixa). |
+| ⚠️ DIVERGENTE | Caixa só vê o PDV no menu | No site publicado (deploy 5356220) o menu do Caixa mostra PDV e Vendas (consulta), sem Painel, Estoque, Clientes nem Ajustes; as telas bloqueadas dão /403 pela URL. O plano diz só PDV; Vendas ficou por decisão das fases de design (o Caixa consulta e o Gestor abre e fecha o caixa). |
 | ❌ FALHOU | Caixa só vê o PDV: menu e rotas (site publicado, antes da correção) | O menu do Caixa mostrava Painel, PDV, Estoque, Clientes, Vendas e Ajustes e /estoque abria pela URL (só /ajustes dava 403). Corrigido no PR #59. |
 
 ### 6. Produtos: CRUD, EAN duplicado, exclusão lógica e definitiva, switch fiscal
@@ -123,8 +123,10 @@
 | ✅ PASSOU | Editar produto | HTTP 200, preço 13.5 |
 | ✅ PASSOU | Inativar e reativar (exclusão lógica) | inativar 200/false; reativar 200/true |
 | ✅ PASSOU | Exclusão definitiva de produto sem histórico (DELETE) e exclusão lógica (inativar) coexistem | DELETE 204; produto some da lista: true; a inativação já foi validada antes (200) |
+| ✅ PASSOU | Com a chave fiscal ligada, produto sem NCM/CFOP nasce inativo (RN09.1) | ativo false |
+| ✅ PASSOU | …e não pode ser reativado sem os dados fiscais (RN09.2) | HTTP 403 {"code":"PRODUTO_SEM_CONFORMIDADE_FISCAL","message":"Não é possível reativar: produto sem NCM/CFOP com a emissão de NFC-e ativada nesta loja.","requestId":"req-7z"} |
+| ✅ PASSOU | …e reativa depois de informar NCM e CFOP | HTTP 200, ativo true |
 | ℹ️ OBSERVAÇÃO | Excluir definitivamente um produto que já foi vendido | DELETE devolveu 204 e o produto saiu do cadastro. O histórico de vendas continua: 4 venda(s) ainda listam "Café Etapa7" pelo nome gravado na venda. A API não bloqueia a exclusão definitiva de produto já vendido (só a inativação preserva o cadastro). |
-| ⏸️ BLOQUEADO | Chave fiscal ligada sem NCM/CFOP: o produto nasce inativo e não reativa (RN09.1/2) | Exige loja Premium com a chave fiscal ligada (cenários 14 a 16). |
 
 ### 7. Categorias N:N; excluir categoria não apaga produtos
 
@@ -201,25 +203,39 @@
 | ✅ PASSOU | CRM no Free: telefone/observação/nascimento bloqueados (403) | HTTP 409 {"code":"PLANO_RECURSO_PREMIUM","message":"O cadastro completo de clientes não está disponível no plano Free: telefone. Assine o Premium para usar.","details":{ |
 | ✅ PASSOU | Switch fiscal indisponível no Free | PATCH 409 {"code":"NFCE_PRE_CHECK_REPROVADO","message":"A loja não cumpre os requisitos para emitir ; pre-check apto false |
 | ✅ PASSOU | 51º produto ativo bloqueado no Free | bloqueou ao tentar o 51º (ativos agora 50); resposta 409 {"code":"PLANO_LIMITE_PRODUTOS","message":"O plano Free permite no máximo 50 pro |
+| ✅ PASSOU | Premium: o cadastro completo de cliente (telefone) é permitido | cliente f74f5a5a telefone 81999990000 |
 
 ### 14. Trial com cartão e assinatura
 
 | | Verificação | Evidência |
 |---|---|---|
-| ⏸️ BLOQUEADO | Trial com cartão (modo dev) vira Premium; sem cartão válido não ativa; Pix não vale para assinatura | Precisa concluir o checkout da AbacatePay em modo dev com cartão de teste. O front já redireciona para app.abacatepay.com (POST /billing/assinatura devolve a checkout_url); o pós-pagamento depende do webhook e de uma loja de teste. |
+| ✅ PASSOU | Loja em trial: plano Premium, status TRIALING, trial com data de fim e NFC-e liberada | plano PREMIUM, status TRIALING, trial até 2026-11-05, nfce true, produtos ilimitados true |
+| ✅ PASSOU | Pix não é aceito para assinatura (só cartão) | HTTP 400 {"code":"VALIDATION_ERROR","message":"Erro de validação.","details":{"issues":[{"field":"metodo_pagamento","message":"Invalid input: expected \"CARTAO\""}]},"requestId":" |
+| ✅ PASSOU | Sem cartão válido a assinatura não ativa (RN04): o checkout é aberto, mas o plano continua Free até o pagamento | POST 201, checkout em app.abacatepay.com, trial 7 dias; depois: plano FREE, status null |
+| ℹ️ OBSERVAÇÃO | Ativar o trial pelo checkout com cartão de teste da AbacatePay | O checkout (app.abacatepay.com) abre e o plano não muda sem o pagamento, mas o pagamento com cartão de teste não foi concluído. Os estados Trial, Ativa e Inadimplente das lojas Premium de teste foram gravados pelo script scripts/premium-teste.ts, que reproduz o resultado do webhook. |
 
 ### 15. Inadimplência e cancelamento
 
 | | Verificação | Evidência |
 |---|---|---|
-| ⏸️ BLOQUEADO | Inadimplência e cancelamento: modo restrito, switch fiscal desligado, bloqueio acima do limite | Depende de uma loja Premium e de simular o webhook (a API não expõe rota para isso ao front). |
+| ✅ PASSOU | Inadimplente: PAST_DUE, modo restrito, NFC-e fora do plano | status PAST_DUE, plano FREE, modo_restrito true (a API só liga o modo restrito quando a loja que perdeu a assinatura está na cota do Free: aqui 50 de 50 produtos; com 3 produtos ele vinha false), nfce false |
+| ✅ PASSOU | Inadimplente: switch fiscal indisponível | PATCH 409 {"code":"NFCE_PRE_CHECK_REPROVADO","message":"A loja não cumpre os requisitos para emitir ; emite_nfce false |
+| ✅ PASSOU | Inadimplente: novos cadastros bloqueados acima do limite do Free (51º produto) | bloqueou no 51º (ativos 50); HTTP 409 {"code":"PLANO_LIMITE_PRODUTOS","message":"O plano Free permite no máximo 50 produtos ativos (esta loja tem 50). Inative algum produto ou assine o Premium.","details":{"l |
+| ✅ PASSOU | Inadimplente: a loja não perde o acesso (continua vendendo e consultando) | GET /produto 200, 50 produtos |
+| ✅ PASSOU | Cancelar a assinatura volta a loja ao Free e desliga a NFC-e | cancelar 200; depois: plano FREE, status CANCELED, nfce false, emite_nfce false |
+| ℹ️ OBSERVAÇÃO | Cancelar a assinatura (loja Trial) deixou a loja Trial no Free | O teste de cancelamento consumiu a loja "Premium Trial" e a loja "Premium Inadimplente" passou a ter 50 produtos de teste. Rodar de novo scripts/premium-teste.ts --confirmar restaura o estado de partida das lojas. |
 
 ### 16. NFC-e simulada
 
 | | Verificação | Evidência |
 |---|---|---|
 | ✅ PASSOU | Loja Free: nenhuma NFC-e é gerada (comprovante não fiscal) | Recibo "COMPROVANTE DE VENDA (NÃO FISCAL)" com "DOCUMENTO SEM VALOR FISCAL (sem emissão de NFC-e neste plano)"; GET /nfce/vendas/:id da venda devolve 404. |
-| ⏸️ BLOQUEADO | NFC-e simulada após venda paga com switch ativo (aviso SEM VALOR FISCAL, linha da taxa R$ 0,80, CPF opcional, visualização e impressão) | Exige loja Premium com certificado, inscrição estadual e produtos com NCM/CFOP; o espelho está integrado ao PDV e à tela de Vendas, mas sem teste ponta a ponta. |
+| ✅ PASSOU | Venda paga com switch ativo gera a nota simulada, com aviso de simulação e chave fictícia | venda 201; nota 200 nº 1 série 1; aviso: DOCUMENTO SEM VALOR FISCAL — SIMULAÇÃO (emissão real fora do escopo do; chave SIMULADO489607968635… |
+| ✅ PASSOU | Sem CPF a nota sai como Consumidor não identificado | consumidor {"identificado":false,"nome":null,"cpf":null} |
+| ✅ PASSOU | Com cliente anexado a nota traz o CPF | consumidor {"identificado":true,"nome":"Cliente Premium","cpf":"02232113469"} |
+| ✅ PASSOU | Nota de venda Pix traz a linha da taxa de R$ 0,80 e o total cobrado | total_venda 29.9, taxa_pix 0.8, total_cobrado 30.7, forma PIX |
+| ✅ PASSOU | Visualização e impressão da nota | GET /nfce/vendas/:id/imprimir 200 200 caracteres |
+| ✅ PASSOU | Pela tela: venda Pix na loja Premium mostra a NFC-e simulada com o aviso e a taxa | Venda concluída \| NFC-e (simulado) nº 000.004 · R$ 30,70 \| Pagamento recebido e estoque baixado. \| LOJA PREMIUM ATIVA (CENÁRIO 16) \| CNPJ 30000002000141 \| IE 123456789110 \| DOCUMENTO AUXILIAR DA NOTA FISCAL \| DE CONSUMIDOR ELETRÔNICA \| NFC-e (SIMULADO) nº 000.004 · Série 001 \| 29/10/2026 às 18:03 \| ITEM / QTD × UNIT \| |
 
 ### 17. Estados de erro: 401/403/404, API fora do ar, cold start
 
@@ -230,7 +246,7 @@
 | ✅ PASSOU | 404 para recurso inexistente | HTTP 404 {"code":"ROUTE_NOT_FOUND","message":"Rota GET /produto/00000000-0000-4000-8000-000000000000 não encontrada.","requestId":"req-16m"} |
 | ✅ PASSOU | 400 de validação com detalhes por campo | HTTP 400 {"code":"VALIDATION_ERROR","message":"Erro de validação.","details":{"issues":[{"field":"nome","message":"O nome do produto é obrigatório."},{"field":"preco_cus |
 | ✅ PASSOU | Página 404 para rota inexistente | 404 \| Página não encontrada. \| O endereço não corresponde a nenhuma tela disponível no EstoquePay. \| Voltar ao início |
-| ✅ PASSOU | API fora do ar mostra a tela de erro de rede † | caminho /painel; texto: Não foi possível conectar ao servidor \| Confira sua conexão. Se estiver tudo certo, o servidor pode estar iniciando ou fora do ar: tente de novo em instantes. \| Tentar de novo |
+| ✅ PASSOU | API fora do ar mostra a tela de erro de rede | caminho /painel; texto: Não foi possível conectar ao servidor \| Confira sua conexão. Se estiver tudo certo, o servidor pode estar iniciando ou fora do ar: tente de novo em instantes. \| Tentar de novo |
 | ❌ FALHOU | API fora do ar mostra a tela de erro de rede (site publicado, antes da correção) | Com /api bloqueada, o front mandava para /login em vez de mostrar o erro de conexão. Corrigido no PR #59. |
 | ℹ️ OBSERVAÇÃO | Cold start da hospedagem | Não dá para forçar sob demanda. Nas rodadas de hoje a Render respondeu em cerca de 1 s (instância já acordada). A tela "Verificando sua sessão..." traz o aviso de que o servidor gratuito hiberna e a primeira abertura pode levar cerca de 1 minuto; o limite de espera das chamadas é de 90 s. |
 

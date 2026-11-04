@@ -141,7 +141,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
             <caption className="sr-only">Clientes da loja</caption>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Cliente</TableHead>
+                <TableHead scope="col" className="w-full">Cliente</TableHead>
                 <TableHead scope="col" className="text-center">
                   Compras
                 </TableHead>
@@ -164,8 +164,8 @@ function CustomerManager({ storeId }: { storeId: string }) {
                     className={`h-[72px] cursor-pointer ${selectedId === customer.id ? "bg-[var(--color-nav)]" : ""}`}
                     aria-selected={selectedId === customer.id}
                   >
-                    <TableCell>
-                      <button type="button" onClick={() => setSelectedId(customer.id)} className="flex min-w-0 items-center gap-3 text-left">
+                    <TableCell className="max-w-0">
+                      <button type="button" onClick={() => setSelectedId(customer.id)} className="flex w-full min-w-0 items-center gap-3 text-left">
                         <Avatar name={customer.name} />
                         <span className="flex min-w-0 flex-col">
                           <strong className="truncate text-[15px]">{customer.name}</strong>
@@ -173,9 +173,9 @@ function CustomerManager({ storeId }: { storeId: string }) {
                         </span>
                       </button>
                     </TableCell>
-                    <TableCell className="text-center font-medium tabular-nums">{row.count}</TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">{formatBRL(row.ticketCents)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">{row.count}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right font-bold tabular-nums">{formatBRL(row.ticketCents)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
                       <Badge active={count > 0}>{`${count} ${count === 1 ? "ativo" : "ativos"}`}</Badge>
                     </TableCell>
                   </TableRow>
@@ -183,8 +183,8 @@ function CustomerManager({ storeId }: { storeId: string }) {
               })}
               {!query && (
                 <TableRow onClick={() => setSelectedId(WALK_IN)} className={`h-[72px] cursor-pointer ${isWalkIn ? "bg-[var(--color-nav)]" : ""}`}>
-                  <TableCell>
-                    <button type="button" onClick={() => setSelectedId(WALK_IN)} className="flex min-w-0 items-center gap-3 text-left">
+                  <TableCell className="max-w-0">
+                    <button type="button" onClick={() => setSelectedId(WALK_IN)} className="flex w-full min-w-0 items-center gap-3 text-left">
                       <Avatar name="Consumidor" />
                       <span className="flex min-w-0 flex-col">
                         <strong className="truncate text-[15px]">Consumidor não identificado</strong>
@@ -192,9 +192,9 @@ function CustomerManager({ storeId }: { storeId: string }) {
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className="text-center font-medium tabular-nums">{walkIn.count}</TableCell>
-                  <TableCell className="text-right font-bold tabular-nums">{formatBRL(walkIn.ticketCents)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">{walkIn.count}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right font-bold tabular-nums">{formatBRL(walkIn.ticketCents)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right">
                     <Badge active={false}>0 ativos</Badge>
                   </TableCell>
                 </TableRow>
