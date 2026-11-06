@@ -5,6 +5,8 @@ export type UserSession = {
     id: string
     name: string
     email: string
+    /** Foto (URL do Google ou data URI enviado no Meu perfil). */
+    image?: string | null
   }
   expiresAt: number
 }
@@ -22,6 +24,8 @@ export type AuthContextValue = {
   signInWithGoogle: () => Promise<boolean>
   signOut: () => Promise<void>
   refreshSession: () => Promise<UserSession | null>
+  /** Modo demonstração: grava nome e foto na sessão local (com a API, use refreshSession). */
+  patchDemoUser: (patch: { name?: string; image?: string | null }) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

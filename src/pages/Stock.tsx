@@ -1,5 +1,6 @@
 import { ArrowDownToLine, Filter, List, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 
 import AlertBanner from "@/components/AlertBanner"
 import PageHeader from "@/components/PageHeader"
@@ -50,6 +51,18 @@ export default function Stock() {
   const [category, setCategory] = useState("Todos")
   const [showSearch, setShowSearch] = useState(false)
   const [query, setQuery] = useState("")
+  // A busca global do cabeçalho chega como ?busca=; cada nova busca substitui o filtro atual.
+  const [params] = useSearchParams()
+  const fromHeader = params.get("busca")
+  const [lastFromHeader, setLastFromHeader] = useState<string | null>(null)
+  if (fromHeader !== lastFromHeader) {
+    setLastFromHeader(fromHeader)
+    if (fromHeader) {
+      setQuery(fromHeader)
+      setShowSearch(true)
+      setCategory("Todos")
+    }
+  }
   const [onlyCritical, setOnlyCritical] = useState(false)
   const [editing, setEditing] = useState<Product | "new" | null>(null)
   const [moving, setMoving] = useState<{ productId: string } | null>(null)

@@ -138,6 +138,8 @@ export type ApiVenda = {
   cliente_id?: string | null
   desconto?: number | null
   cupom_codigo?: string | null
+  /** Operador de caixa que registrou a venda (só na listagem de vendas). */
+  operador_nome?: string | null
 }
 
 export function vendaToSale(item: ApiVenda): Sale {
@@ -155,6 +157,7 @@ export function vendaToSale(item: ApiVenda): Sale {
     ...(item.cliente_id ? { customerId: item.cliente_id } : {}),
     ...(item.desconto ? { discountCents: cents(item.desconto) } : {}),
     ...(item.cupom_codigo ? { couponCode: item.cupom_codigo } : {}),
+    ...(item.operador_nome ? { operator: item.operador_nome } : {}),
     // Só há número de nota quando a NFC-e simulada foi emitida para a venda.
     nfce: item.nfe_numero != null,
   }

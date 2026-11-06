@@ -13,14 +13,8 @@ import type { Limits } from "@/billing/plan"
 import { formatBirthDate } from "@/lib/format"
 import type { StoreRole } from "@/store/store-context"
 import { config } from "@/config"
-import { ROLE_LABEL, assignableRoles, canManageMember, checkChangeRole, checkRemove, type Member } from "@/team/team"
+import { ROLE_LABEL, ROLE_TONE, assignableRoles, canManageMember, checkChangeRole, checkRemove, type Member } from "@/team/team"
 import type { Team } from "@/team/useTeam"
-
-const roleTone: Record<StoreRole, string> = {
-  Owner: "bg-[var(--color-amber)] text-white",
-  Gestor: "bg-[var(--color-info-soft)] text-[var(--color-info)]",
-  Colaborador: "bg-[var(--color-paper-dim)] text-[var(--color-slate)]",
-}
 
 type TeamTabProps = {
   team: Team
@@ -121,11 +115,13 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
           {members.map((member) => {
             // Na API o convite pendente não tem rota de edição nem de remoção.
             const manageable = canManageMember(actor, member) && !(config.useApi && member.status === "convite")
+            // Ninguém altera o próprio cargo nem se remove da equipe: a linha de quem está logado fica sem ações.
+            const isSelf = member.email.toLowerCase() === self.email.toLowerCase()
             return (
               <TableRow key={member.id} className="h-[76px]">
                 <TableCell>
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar name={member.name} />
+                    <Avatar name={member.name} src={member.photo} />
                     <span className="flex min-w-0 flex-col">
                       <strong className="truncate text-[15px]">{member.name}</strong>
                       <span className="max-w-[190px] truncate text-[13px] text-[#94a3b8]">{member.email}</span>
@@ -133,11 +129,14 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${roleTone[member.role]}`}>{ROLE_LABEL[member.role]}</span>
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${ROLE_TONE[member.role]}`}>{ROLE_LABEL[member.role]}</span>
                   {member.status === "convite" && <span className="ml-2 text-[11px] font-bold uppercase text-[var(--color-warn)]">Convite pendente</span>}
                 </TableCell>
                 <TableCell className="text-center font-[family-name:var(--font-mono)] text-[13px] text-[var(--color-slate)]">{formatBirthDate(iso(member.linkedAt))}</TableCell>
                 <TableCell className="text-right">
+                  {isSelf ? (
+                    <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-amber)]">Você</span>
+                  ) : (
                   <span className="inline-flex gap-1">
                     <button
                       type="button"
@@ -166,6 +165,7 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
                       <UserMinus className="h-[18px] w-[18px]" />
                     </button>
                   </span>
+                  )}
                 </TableCell>
               </TableRow>
             )

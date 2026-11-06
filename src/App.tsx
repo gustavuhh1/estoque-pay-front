@@ -22,6 +22,7 @@ import Sales from "@/pages/Sales"
 import Stock from "@/pages/Stock"
 import Customers from "@/pages/Customers"
 import SettingsPage from "@/pages/Settings"
+import Profile from "@/pages/Profile"
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
                   <Route path="/estoque" element={<Stock />} />
                   <Route path="/clientes" element={<Customers />} />
                   <Route path="/ajustes" element={<SettingsPage />} />
+                  <Route path="/perfil" element={<Profile />} />
                 </Route>
                 <Route path="/403" element={<Forbidden />} />
                 <Route path="/erro-rede" element={<NetworkError />} />

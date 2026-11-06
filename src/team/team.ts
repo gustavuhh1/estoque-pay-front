@@ -9,10 +9,19 @@ export type Member = {
   linkedAt: number
   /** Convite pendente: o e-mail ainda não tem conta no EstoquePay. */
   status: "ativo" | "convite"
+  /** Foto do usuário (só membros com conta, pela API). */
+  photo?: string | null
 }
 
 /** O cargo "Colaborador" aparece como "Caixa" na interface. */
 export const ROLE_LABEL: Record<StoreRole, string> = { Owner: "Owner", Gestor: "Gestor", Colaborador: "Caixa" }
+
+/** Cores do selo de cargo (Equipe e Meu perfil). */
+export const ROLE_TONE: Record<StoreRole, string> = {
+  Owner: "bg-[var(--color-amber)] text-white",
+  Gestor: "bg-[var(--color-info-soft)] text-[var(--color-info)]",
+  Colaborador: "bg-[var(--color-paper-dim)] text-[var(--color-slate)]",
+}
 
 const key = (storeId: string) => `estoquepay.demo.team.${storeId}`
 const date = (iso: string) => new Date(`${iso}T12:00:00`).getTime()

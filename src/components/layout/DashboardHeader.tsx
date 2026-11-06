@@ -1,6 +1,8 @@
-import { Bell, Menu, Search, ShoppingCart } from "lucide-react"
+import { Bell, Menu, ShoppingCart } from "lucide-react"
 import { Link } from "react-router-dom"
 
+import Avatar from "@/components/Avatar"
+import GlobalSearch from "@/components/layout/GlobalSearch"
 import StoreSwitcher from "@/components/layout/StoreSwitcher"
 import { useAuth } from "@/auth/useAuth"
 import { useStores } from "@/store/useStores"
@@ -14,7 +16,6 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
   const { activeStore } = useStores()
 
   const name = session?.user.name ?? "Usuário"
-  const initial = name.trim()[0]?.toUpperCase() ?? "U"
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-white/95 backdrop-blur">
@@ -31,15 +32,7 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
           <div className="shrink-0">
             <StoreSwitcher />
           </div>
-          <div className="relative hidden w-full max-w-[450px] md:block">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
-            <input
-              type="search"
-              aria-label="Buscar produtos globalmente"
-              placeholder="Buscar produtos globalmente..."
-              className="h-12 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-4 text-sm font-medium outline-none placeholder:text-[var(--color-slate)] focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35"
-            />
-          </div>
+          <GlobalSearch />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
@@ -63,15 +56,13 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
             <Bell className="h-5 w-5" />
             <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-alert)]" />
           </button>
-          <div className="flex items-center gap-3 border-l border-[var(--color-border)] pl-4">
+          <Link to="/perfil" aria-label="Meu perfil" className="flex items-center gap-3 rounded-xl border-l border-[var(--color-border)] pl-4 transition hover:opacity-80">
             <div className="hidden text-right sm:block">
               <p className="max-w-[160px] truncate text-sm font-bold">{name}</p>
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">{activeStore.role}</p>
             </div>
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-green-100)] text-base font-bold text-[var(--color-amber)]">
-              {initial}
-            </span>
-          </div>
+            <Avatar name={name} src={session?.user.image} size={44} />
+          </Link>
         </div>
       </div>
     </header>

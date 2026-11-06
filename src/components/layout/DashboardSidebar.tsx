@@ -2,6 +2,7 @@ import { Boxes, LayoutDashboard, LogOut, Receipt, Settings, ShoppingCart, Users,
 import { NavLink, Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
+import Avatar from "@/components/Avatar"
 import { config } from "@/config"
 import { useStores } from "@/store/useStores"
 
@@ -27,7 +28,6 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
   const items = config.useApi && activeStore.role === "Colaborador" ? navigation.filter((item) => item.to === "/pdv" || item.to === "/vendas") : navigation
 
   const name = session?.user.name ?? "Usuário"
-  const initial = name.trim()[0]?.toUpperCase() ?? "U"
 
   const handleLogout = async () => {
     await signOut()
@@ -95,15 +95,13 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
 
         <div className="mt-auto px-[18px]">
           <div className="rounded-2xl bg-[var(--color-stock-green-soft)] p-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-green-100)] text-sm font-bold text-[var(--color-amber)]">
-                {initial}
-              </span>
+            <Link to="/perfil" onClick={onClose} aria-label="Meu perfil" className="flex items-center gap-3 rounded-xl transition hover:opacity-80">
+              <Avatar name={name} src={session?.user.image} size={36} />
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-bold">{name}</p>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">{activeStore.role}</p>
               </div>
-            </div>
+            </Link>
             <button
               type="button"
               onClick={handleLogout}
