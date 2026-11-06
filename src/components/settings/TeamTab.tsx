@@ -80,7 +80,7 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
   }
 
   return (
-    <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
+    <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-4 sm:p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Equipe e acessos</h2>
         <Button
@@ -102,8 +102,10 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead scope="col">Membro</TableHead>
-            <TableHead scope="col">Cargo</TableHead>
-            <TableHead scope="col" className="text-center">
+            <TableHead scope="col" className="hidden sm:table-cell">
+              Cargo
+            </TableHead>
+            <TableHead scope="col" className="hidden text-center md:table-cell">
               Vinculado em
             </TableHead>
             <TableHead scope="col" className="text-right">
@@ -119,20 +121,25 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
             const isSelf = member.email.toLowerCase() === self.email.toLowerCase()
             return (
               <TableRow key={member.id} className="h-[76px]">
-                <TableCell>
+                <TableCell className="w-full max-w-0 sm:w-auto sm:max-w-none">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar name={member.name} src={member.photo} />
                     <span className="flex min-w-0 flex-col">
                       <strong className="truncate text-[15px]">{member.name}</strong>
                       <span className="max-w-[190px] truncate text-[13px] text-[#94a3b8]">{member.email}</span>
+                      {/* No celular o cargo vem aqui, no lugar da coluna. */}
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] ${ROLE_TONE[member.role]}`}>{ROLE_LABEL[member.role]}</span>
+                        {member.status === "convite" && <span className="text-[10px] font-bold uppercase text-[var(--color-warn)]">Convite pendente</span>}
+                      </span>
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${ROLE_TONE[member.role]}`}>{ROLE_LABEL[member.role]}</span>
                   {member.status === "convite" && <span className="ml-2 text-[11px] font-bold uppercase text-[var(--color-warn)]">Convite pendente</span>}
                 </TableCell>
-                <TableCell className="text-center font-[family-name:var(--font-mono)] text-[13px] text-[var(--color-slate)]">{formatBirthDate(iso(member.linkedAt))}</TableCell>
+                <TableCell className="hidden text-center font-[family-name:var(--font-mono)] text-[13px] text-[var(--color-slate)] md:table-cell">{formatBirthDate(iso(member.linkedAt))}</TableCell>
                 <TableCell className="text-right">
                   {isSelf ? (
                     <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-amber)]">Você</span>

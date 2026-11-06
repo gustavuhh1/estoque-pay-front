@@ -29,13 +29,14 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="shrink-0">
+          {/* No celular o seletor de loja encolhe (nome truncado) para o avatar caber. */}
+          <div className="min-w-0 sm:shrink-0">
             <StoreSwitcher />
           </div>
           <GlobalSearch />
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
           {!isBetterAuth && (
             <span className="hidden rounded-full border border-[var(--color-amber)]/20 bg-[var(--color-stock-green-soft)] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-stock-green)] xl:inline-flex">
               Modo demonstração
@@ -43,10 +44,12 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
           )}
           <Link
             to="/pdv"
-            className="hidden h-11 items-center gap-2 rounded-xl bg-[var(--color-amber)] px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,108,73,0.25)] transition hover:bg-[var(--color-amber-dark)] sm:inline-flex"
+            aria-label="Nova Venda"
+            title="Nova Venda"
+            className="hidden h-11 items-center gap-2 rounded-xl bg-[var(--color-amber)] px-3.5 text-sm xl:px-5 font-bold text-white shadow-[0_8px_20px_rgba(0,108,73,0.25)] transition hover:bg-[var(--color-amber-dark)] sm:inline-flex"
           >
             <ShoppingCart className="h-4 w-4" />
-            Nova Venda
+            <span className="hidden xl:inline">Nova Venda</span>
           </Link>
           <button
             type="button"
@@ -56,8 +59,8 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
             <Bell className="h-5 w-5" />
             <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-alert)]" />
           </button>
-          <Link to="/perfil" aria-label="Meu perfil" className="flex items-center gap-3 rounded-xl border-l border-[var(--color-border)] pl-4 transition hover:opacity-80">
-            <div className="hidden text-right sm:block">
+          <Link to="/perfil" aria-label="Meu perfil" className="flex items-center gap-3 rounded-xl border-[var(--color-border)] transition hover:opacity-80 sm:border-l sm:pl-4">
+            <div className="hidden text-right xl:block">
               <p className="max-w-[160px] truncate text-sm font-bold">{name}</p>
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">{activeStore.role}</p>
             </div>
