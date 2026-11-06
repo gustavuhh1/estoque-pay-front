@@ -8,6 +8,7 @@ import Field from "@/components/Field"
 import PageHeader from "@/components/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toast, type ToastTone } from "@/components/ui/toast"
@@ -28,6 +29,7 @@ export default function Profile() {
   const [name, setName] = useState<string | null>(null)
   const [nameError, setNameError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [toast, setToast] = useState<{ title: string; tone: ToastTone } | null>(null)
   const notify = (title: string, tone: ToastTone = "success") => setToast({ title, tone })
 
@@ -95,7 +97,7 @@ export default function Profile() {
                     </Button>
                   )}
                   {profile.photo && (
-                    <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => setPhoto(null), "Foto removida.")}>
+                    <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmRemove(true)}>
                       <Trash2 />
                       Remover foto
                     </Button>
@@ -174,6 +176,33 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title="Remover foto?"
+        description={
+          profile.methods.includes("GOOGLE")
+            ? "A sua foto sai do perfil e da equipe e volta a aparecer a inicial do nome. No próximo login com o Google, a foto do Google passa a ser usada."
+            : "A sua foto sai do perfil e da equipe e volta a aparecer a inicial do nome. Você pode enviar outra quando quiser."
+        }
+      >
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => setConfirmRemove(false)}>
+            Manter foto
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setConfirmRemove(false)
+              void run(() => setPhoto(null), "Foto removida.")
+            }}
+          >
+            <Trash2 />
+            Remover foto
+          </Button>
+        </div>
+      </Dialog>
 
       <Toast open={toast !== null} title={toast?.title ?? ""} tone={toast?.tone ?? "success"} onClose={() => setToast(null)} />
     </>

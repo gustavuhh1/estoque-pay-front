@@ -1,7 +1,8 @@
-import { Bell, Menu, Search, ShoppingCart } from "lucide-react"
+import { Bell, Menu, ShoppingCart } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import Avatar from "@/components/Avatar"
+import GlobalSearch from "@/components/layout/GlobalSearch"
 import StoreSwitcher from "@/components/layout/StoreSwitcher"
 import { useAuth } from "@/auth/useAuth"
 import { useStores } from "@/store/useStores"
@@ -31,15 +32,7 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
           <div className="shrink-0">
             <StoreSwitcher />
           </div>
-          <div className="relative hidden w-full max-w-[450px] md:block">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
-            <input
-              type="search"
-              aria-label="Buscar produtos globalmente"
-              placeholder="Buscar produtos globalmente..."
-              className="h-12 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-4 text-sm font-medium outline-none placeholder:text-[var(--color-slate)] focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35"
-            />
-          </div>
+          <GlobalSearch />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
