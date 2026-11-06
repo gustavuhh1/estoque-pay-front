@@ -19,7 +19,6 @@ Acesse http://localhost:5173. Com `VITE_API_URL` vazio o front roda em modo demo
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Checagem de tipos e build de produção |
 | `npm run lint` | Lint com oxlint |
-| `node scripts/seed-demo.mjs` | Recria a loja de apresentação sem duplicar |
 
 ## Telas
 

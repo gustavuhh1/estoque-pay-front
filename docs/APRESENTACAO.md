@@ -24,12 +24,12 @@ Entre com `premium-teste@exemplo.com` / `Premium@teste123` e escolha uma das tr�
 | Loja Premium Trial (cenário 14) | Trial de 7 dias | Ajustes > Assinatura com o trial |
 | Loja Premium Inadimplente (cenário 15) | Pagamento recusado, modo restrito | NFC-e desligada e bloqueio de novos cadastros |
 
-Se uma dessas lojas for gasta nos testes (cancelar a assinatura, por exemplo), a sessão da API restaura as três com `scripts/premium-teste.ts --confirmar` no repositório da API.
+Se uma dessas lojas for gasta nos testes (cancelar a assinatura, por exemplo), `npm run seed -- --prod` no repositório da API restaura as três.
 
 ## Antes de começar
 1. **Abra o site uns 2 minutos antes.** A API gratuita hiberna e a primeira chamada pode levar cerca de 1 minuto para acordar.
 2. Confira `/api/health` e entre uma vez com a conta do Dono.
-3. Se a loja de apresentação for perdida ou estiver bagunçada, `node scripts/seed-demo.mjs` recria o que faltar sem duplicar (a senha das contas é a da tabela).
+3. Se a loja de apresentação for perdida ou estiver bagunçada, `npm run seed -- --prod` no repositório da API recria o que faltar sem duplicar; `--prod --reset` zera tudo e recria do zero.
 
 ## Roteiro sugerido (cerca de 10 minutos)
 1. **Painel** (Dono): vendas do dia, lucro, formas de pagamento, top vendidos e a lista de reposição.
