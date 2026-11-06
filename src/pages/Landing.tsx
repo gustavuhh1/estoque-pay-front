@@ -54,12 +54,12 @@ export default function Landing() {
           <Link to="/" aria-label="EstoquePay">
             <img src={logo} alt="EstoquePay" width={144} height={36} className="h-9 w-36" />
           </Link>
-          <nav className="flex items-center gap-6 sm:gap-10">
+          <nav className="flex items-center gap-4 sm:gap-10">
             <a href="#recursos" className={`hidden md:inline ${navLink}`}>Recursos</a>
             <a href="#precos" className={`hidden md:inline ${navLink}`}>Preços</a>
             <a href="#fiscal" className={`hidden md:inline ${navLink}`}>Fiscal</a>
             <Link to="/login" className="text-xs font-extrabold uppercase tracking-[0.08em] text-[var(--color-amber)] hover:underline">Entrar</Link>
-            <Link to="/cadastro" className={`h-11 px-5 text-[15px] ${brandButton}`}>Começar agora</Link>
+            <Link to="/cadastro" className={`h-10 whitespace-nowrap px-4 text-[13px] sm:h-11 sm:px-5 sm:text-[15px] ${brandButton}`}>Começar agora</Link>
           </nav>
         </div>
       </header>
@@ -204,7 +204,7 @@ function DashboardMock() {
           </div>
         </div>
       </div>
-      <div className="absolute -right-3 top-24 flex items-center gap-3 rounded-[14px] bg-white px-5 py-3.5 shadow-[0_12px_32px_rgba(11,28,48,0.1)] sm:-right-6">
+      <div className="absolute right-2 top-24 flex items-center gap-3 rounded-[14px] bg-white px-4 py-3 sm:px-5 sm:py-3.5 shadow-[0_12px_32px_rgba(11,28,48,0.1)] sm:-right-6">
         <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[var(--color-stock-green-soft)] text-[var(--color-amber)]">
           <CircleCheck className="h-5 w-5" />
         </span>

@@ -45,7 +45,7 @@ function StoreSettings({ store }: { store: Store }) {
     <>
       <PageHeader title="Ajustes do Sistema" description="Gestão, segurança e auditoria da loja ativa." />
 
-      <div role="tablist" aria-label="Seções de ajustes" className="mb-8 mt-8 flex flex-wrap gap-x-2 border-b border-[var(--color-border)]">
+      <div role="tablist" aria-label="Seções de ajustes" className="no-scrollbar -mx-4 mb-6 mt-6 flex gap-x-1 overflow-x-auto border-b border-[var(--color-border)] px-4 sm:mx-0 sm:mb-8 sm:mt-8 sm:gap-x-2 sm:px-0">
         {tabs.map(({ id, label, icon: Icon }) => {
           const active = tab === id
           return (
@@ -54,8 +54,11 @@ function StoreSettings({ store }: { store: Store }) {
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setTab(id)}
-              className={`-mb-px flex items-center gap-2.5 border-b-[3px] px-5 py-3.5 text-xs font-bold uppercase tracking-[0.08em] transition ${
+              onClick={(event) => {
+                setTab(id)
+                event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" })
+              }}
+              className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-[3px] px-3.5 py-3.5 sm:gap-2.5 sm:px-5 text-xs font-bold uppercase tracking-[0.08em] transition ${
                 active ? "border-[var(--color-amber)] text-[var(--color-amber)]" : "border-transparent text-[var(--color-slate)] hover:text-[var(--color-ink)]"
               }`}
             >
@@ -70,7 +73,7 @@ function StoreSettings({ store }: { store: Store }) {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           {tab === "perfil" && <ProfileTab store={store} onSaved={notify} />}
           {tab === "equipe" && (
             <TeamTab team={team} actor={store.role} self={self} limits={limits} onNotify={notify} />

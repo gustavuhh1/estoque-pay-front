@@ -21,7 +21,7 @@ export default function StoreSelection() {
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-amber)] text-white"><Boxes className="h-5 w-5" /></span>
             <span className="font-[family-name:var(--font-display)] text-lg font-semibold">EstoquePay</span>
           </Link>
-          <span className="text-xs text-[var(--color-slate)]">Escolha um estabelecimento para continuar</span>
+          <span className="hidden text-xs text-[var(--color-slate)] sm:inline">Escolha um estabelecimento para continuar</span>
         </div>
       </header>
 

@@ -33,9 +33,9 @@ const timeOnly = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-
 
 const percent = (value: number) => `${value.toFixed(1).replace(".", ",")}%`
 
-function Thumb({ product, size = 44 }: { product?: Product; size?: number }) {
+function Thumb({ product, size = 44, className = "" }: { product?: Product; size?: number; className?: string }) {
   return (
-    <span style={{ width: size, height: size }} className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
+    <span style={{ width: size, height: size }} className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--color-paper-dim)] text-[var(--color-slate)] ${className}`}>
       {product?.image ? <img src={product.image} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Package className="h-4 w-4" />}
     </span>
   )
@@ -76,32 +76,33 @@ export default function Dashboard() {
                 </button>
               ))}
             </div>
-            <Button asChild variant="outline">
-              <Link to="/pdv">
+            <Button asChild variant="outline" className="px-3 sm:px-6">
+              <Link to="/pdv" aria-label="Abrir PDV">
                 <ShoppingCart className="h-4 w-4" />
-                Abrir PDV
+                <span className="hidden sm:inline">Abrir PDV</span>
               </Link>
             </Button>
           </>
         }
       />
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 xl:grid-cols-4">
         <MetricCard
+          compact="mobile"
           icon={DollarSign}
           label={`Vendas totais (${label})`}
           value={formatBRL(metrics.salesCents)}
           badge={delta === null ? (metrics.salesCents > 0 ? "Novo" : "Sem base") : `${delta >= 0 ? "+" : ""}${percent(delta)}`}
           tone={delta !== null && delta < 0 ? "danger" : "brand"}
         />
-        <MetricCard icon={TrendingUp} tone="info" label={`Lucro bruto (${label})`} value={formatBRL(metrics.profitCents)} badge={`${percent(metrics.marginPercent)} margem`} />
-        <MetricCard icon={TriangleAlert} tone="warning" label="Baixo estoque" value={`${restock.length} ${restock.length === 1 ? "item" : "itens"}`} badge="Alerta" />
-        <MetricCard icon={Boxes} tone="danger" label="Capital imobilizado" value={formatBRL(stockValueCents(active))} badge="Estoque" badgeTone="neutral" />
+        <MetricCard compact="mobile" icon={TrendingUp} tone="info" label={`Lucro bruto (${label})`} value={formatBRL(metrics.profitCents)} badge={`${percent(metrics.marginPercent)} margem`} />
+        <MetricCard compact="mobile" icon={TriangleAlert} tone="warning" label="Baixo estoque" value={`${restock.length} ${restock.length === 1 ? "item" : "itens"}`} badge="Alerta" />
+        <MetricCard compact="mobile" icon={Boxes} tone="danger" label="Capital imobilizado" value={formatBRL(stockValueCents(active))} badge="Estoque" badgeTone="neutral" />
       </section>
 
-      <section className="mt-8 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.6fr_1fr]">
         <Panel title="Faturamento" note={`${metrics.count} ${metrics.count === 1 ? "venda" : "vendas"} · ticket médio ${formatBRL(metrics.ticketCents)}`}>
-          <div className="flex h-[220px] items-end gap-3.5 border-b border-[var(--color-border)] px-1 pt-2" role="img" aria-label={`Faturamento ${label}`}>
+          <div className="flex h-[150px] items-end gap-2 border-b sm:h-[220px] sm:gap-3.5 border-[var(--color-border)] px-1 pt-2" role="img" aria-label={`Faturamento ${label}`}>
             {metrics.series.map((bar) => {
               const top = bar.totalCents === peak && peak > 1
               return (
@@ -109,15 +110,15 @@ export default function Dashboard() {
                   <span className={`whitespace-nowrap ${eyebrow} ${top ? "!text-[var(--color-amber-dark)]" : ""}`}>{top ? formatBRL(bar.totalCents) : ""}</span>
                   <span
                     className={`w-full max-w-14 rounded-t-lg transition-[height] ${top ? "bg-[var(--color-amber)]" : "bg-[var(--color-green-200)]"}`}
-                    style={{ height: `${Math.max(2, (bar.totalCents / peak) * 170)}px` }}
+                    style={{ height: `${Math.max(1, (bar.totalCents / peak) * 78)}%` }}
                   />
                 </div>
               )
             })}
           </div>
-          <div className="flex gap-3.5 px-1 pt-2.5">
+          <div className="flex gap-2 px-1 pt-2.5 sm:gap-3.5">
             {metrics.series.map((bar) => (
-              <span key={bar.label} className={`flex-1 text-center ${eyebrow}`}>
+              <span key={bar.label} className={`min-w-0 flex-1 truncate text-center ${eyebrow}`}>
                 {bar.label}
               </span>
             ))}
@@ -145,7 +146,7 @@ export default function Dashboard() {
         </Panel>
       </section>
 
-      <section className="mt-8 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.05fr_1fr]">
         <Panel title="Top Vendidos" action={{ label: "Ver tudo", to: "/estoque" }}>
           {metrics.top.length === 0 ? (
             <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda no período.</p>
@@ -156,7 +157,7 @@ export default function Dashboard() {
                 const status = product ? stockStatus(product) : "normal"
                 return (
                   <li key={entry.productId} className="flex h-[72px] items-center gap-3.5">
-                    <Thumb product={product} />
+                    <Thumb product={product} className="max-sm:hidden" />
                     <span className="min-w-0 flex-1">
                       <strong className="block truncate text-[15px]">{entry.name}</strong>
                       <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">{entry.sales} {entry.sales === 1 ? "venda" : "vendas"}</span>
@@ -186,8 +187,8 @@ export default function Dashboard() {
           ) : (
             <ul className="flex flex-col gap-3">
               {restock.slice(0, 4).map((product) => (
-                <li key={product.id} className="flex items-center gap-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-paper)] px-3.5 py-3">
-                  <Thumb product={product} />
+                <li key={product.id} className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-paper)] px-3 py-3 sm:gap-3.5 sm:px-3.5">
+                  <Thumb product={product} className="max-sm:hidden" />
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-[15px]">{product.name}</strong>
                     <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
@@ -197,10 +198,10 @@ export default function Dashboard() {
                   <span className={`${pill} ${product.stock <= 0 ? "bg-[var(--color-ink)] text-white" : "border border-[#fde68a] bg-[var(--color-warn-soft)] text-[var(--color-warn)]"}`}>
                     {product.stock <= 0 ? "Zerado" : `${formatQuantity(product.stock)} ${product.unit}`}
                   </span>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/estoque">
+                  <Button asChild size="sm" variant="outline" className="px-2.5 sm:px-4">
+                    <Link to="/estoque" aria-label={`Repor ${product.name}`}>
                       <Plus className="h-3.5 w-3.5" />
-                      Repor
+                      <span className="hidden sm:inline">Repor</span>
                     </Link>
                   </Button>
                 </li>
@@ -210,7 +211,7 @@ export default function Dashboard() {
         </Panel>
       </section>
 
-      <section className="mt-8 grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.05fr_1fr]">
         <Panel title="Últimas vendas" action={{ label: "Histórico", to: "/vendas" }}>
           {recentSales.length === 0 ? (
             <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda registrada ainda.</p>
@@ -223,13 +224,13 @@ export default function Dashboard() {
                   <li key={sale.id} className="flex h-16 items-center gap-3">
                     <span className="min-w-0 flex-1">
                       <strong className="block truncate">{sale.customerName ?? "Consumidor não identificado"}</strong>
-                      <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
+                      <span className="block truncate font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
                         {saleLabel(sale)} · {timeOnly.format(sale.createdAt)} · {PAYMENT_LABELS[sale.payment].toUpperCase()}
                       </span>
                     </span>
                     <strong className={`tabular-nums ${done ? "" : "text-[var(--color-slate)] line-through"}`}>{formatBRL(sale.totalCents)}</strong>
                     <span
-                      className={`${pill} ${!done ? "bg-[var(--color-ink)] text-white" : note === "Simulada" ? "bg-[var(--color-info-soft)] text-[var(--color-info)]" : "bg-[var(--color-paper-dim)] text-[var(--color-slate)]"}`}
+                      className={`${pill} max-sm:hidden ${!done ? "bg-[var(--color-ink)] text-white" : note === "Simulada" ? "bg-[var(--color-info-soft)] text-[var(--color-info)]" : "bg-[var(--color-paper-dim)] text-[var(--color-slate)]"}`}
                     >
                       {note}
                     </span>
@@ -251,13 +252,16 @@ export default function Dashboard() {
                   <li key={movement.id} className="flex h-16 items-center gap-3">
                     <span className="min-w-0 flex-1">
                       <strong className="block truncate">{movement.productName}</strong>
-                      <span className="font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">{formatDateTime(movement.createdAt)}</span>
+                      <span className="block truncate font-[family-name:var(--font-mono)] text-xs text-[#94a3b8]">
+                        <span className="sm:hidden">{reason.label} · </span>
+                        {formatDateTime(movement.createdAt)}
+                      </span>
                     </span>
-                    <strong className={`w-24 text-center tabular-nums ${movement.delta < 0 ? "text-[var(--color-alert)]" : "text-[var(--color-amber)]"}`}>
+                    <strong className={`shrink-0 text-right tabular-nums sm:w-24 sm:text-center ${movement.delta < 0 ? "text-[var(--color-alert)]" : "text-[var(--color-amber)]"}`}>
                       {movement.delta > 0 ? "+" : ""}
                       {formatQuantity(movement.delta)} {productById(movement.productId)?.unit ?? ""}
                     </strong>
-                    <span className={`${pill} ${reason.className}`}>{reason.label}</span>
+                    <span className={`${pill} ${reason.className} max-sm:hidden`}>{reason.label}</span>
                   </li>
                 )
               })}

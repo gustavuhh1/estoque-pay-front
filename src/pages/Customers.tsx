@@ -1,5 +1,5 @@
 import { Pencil, Search, ShoppingBag, Ticket, UserPlus } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import Avatar from "@/components/Avatar"
 import CouponDialog from "@/components/customers/CouponDialog"
@@ -47,6 +47,12 @@ function CustomerManager({ storeId }: { storeId: string }) {
   const { limits } = usePlan()
   const { customers, coupons, isLoading, error, canRemove, save: saveCustomer, remove: removeCustomer, issue } = useCustomers(storeId)
   const [pickedId, setSelectedId] = useState<string | null>(null)
+  // No celular os detalhes ficam abaixo da lista: escolher um cliente rola até eles.
+  const detailsRef = useRef<HTMLDivElement>(null)
+  const pick = (id: string) => {
+    setSelectedId(id)
+    if (window.matchMedia("(max-width: 1023px)").matches) detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
   // Sem escolha do usuário, abre no primeiro cliente (que só chega depois da API).
   const selectedId = pickedId ?? customers[0]?.id ?? WALK_IN
   const [query, setQuery] = useState("")
@@ -125,8 +131,8 @@ function CustomerManager({ storeId }: { storeId: string }) {
         }
       />
 
-      <div className="mt-8 grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <Card className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
+      <div className="mt-6 grid items-start gap-4 sm:mt-8 lg:grid-cols-[1.35fr_1fr]">
+        <Card className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-5">
           <div className="relative mb-4">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
             <input
@@ -145,10 +151,10 @@ function CustomerManager({ storeId }: { storeId: string }) {
                 <TableHead scope="col" className="text-center">
                   Compras
                 </TableHead>
-                <TableHead scope="col" className="whitespace-nowrap text-right">
+                <TableHead scope="col" className="hidden whitespace-nowrap text-right sm:table-cell">
                   Ticket médio
                 </TableHead>
-                <TableHead scope="col" className="text-right">
+                <TableHead scope="col" className="hidden text-right sm:table-cell">
                   Cupons
                 </TableHead>
               </TableRow>
@@ -160,12 +166,12 @@ function CustomerManager({ storeId }: { storeId: string }) {
                 return (
                   <TableRow
                     key={customer.id}
-                    onClick={() => setSelectedId(customer.id)}
+                    onClick={() => pick(customer.id)}
                     className={`h-[72px] cursor-pointer ${selectedId === customer.id ? "bg-[var(--color-nav)]" : ""}`}
                     aria-selected={selectedId === customer.id}
                   >
                     <TableCell className="max-w-0">
-                      <button type="button" onClick={() => setSelectedId(customer.id)} className="flex w-full min-w-0 items-center gap-3 text-left">
+                      <button type="button" onClick={() => pick(customer.id)} className="flex w-full min-w-0 items-center gap-3 text-left">
                         <Avatar name={customer.name} />
                         <span className="flex min-w-0 flex-col">
                           <strong className="truncate text-[15px]">{customer.name}</strong>
@@ -173,18 +179,21 @@ function CustomerManager({ storeId }: { storeId: string }) {
                         </span>
                       </button>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">{row.count}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-bold tabular-nums">{formatBRL(row.ticketCents)}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right">
+                    <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">
+                      {row.count}
+                      <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden">{formatBRL(row.ticketCents)}</span>
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell">{formatBRL(row.ticketCents)}</TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-right sm:table-cell">
                       <Badge active={count > 0}>{`${count} ${count === 1 ? "ativo" : "ativos"}`}</Badge>
                     </TableCell>
                   </TableRow>
                 )
               })}
               {!query && (
-                <TableRow onClick={() => setSelectedId(WALK_IN)} className={`h-[72px] cursor-pointer ${isWalkIn ? "bg-[var(--color-nav)]" : ""}`}>
+                <TableRow onClick={() => pick(WALK_IN)} className={`h-[72px] cursor-pointer ${isWalkIn ? "bg-[var(--color-nav)]" : ""}`}>
                   <TableCell className="max-w-0">
-                    <button type="button" onClick={() => setSelectedId(WALK_IN)} className="flex w-full min-w-0 items-center gap-3 text-left">
+                    <button type="button" onClick={() => pick(WALK_IN)} className="flex w-full min-w-0 items-center gap-3 text-left">
                       <Avatar name="Consumidor" />
                       <span className="flex min-w-0 flex-col">
                         <strong className="truncate text-[15px]">Consumidor não identificado</strong>
@@ -192,9 +201,12 @@ function CustomerManager({ storeId }: { storeId: string }) {
                       </span>
                     </button>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">{walkIn.count}</TableCell>
-                  <TableCell className="whitespace-nowrap text-right font-bold tabular-nums">{formatBRL(walkIn.ticketCents)}</TableCell>
-                  <TableCell className="whitespace-nowrap text-right">
+                  <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">
+                    {walkIn.count}
+                    <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden">{formatBRL(walkIn.ticketCents)}</span>
+                  </TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell">{formatBRL(walkIn.ticketCents)}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-right sm:table-cell">
                     <Badge active={false}>0 ativos</Badge>
                   </TableCell>
                 </TableRow>
@@ -213,8 +225,8 @@ function CustomerManager({ storeId }: { storeId: string }) {
           )}
         </Card>
 
-        <div className="flex flex-col gap-4">
-          <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
+        <div ref={detailsRef} className="flex scroll-mt-24 flex-col gap-4">
+          <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-5 sm:p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
             <div className="mb-5 flex items-center gap-4">
               <Avatar name={selected?.name ?? "Consumidor"} size={56} />
               <div className="flex min-w-0 flex-col gap-0.5">
