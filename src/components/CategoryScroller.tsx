@@ -5,7 +5,19 @@ import { useEffect, useRef, useState } from "react"
  * Categorias numa linha só, rolando na horizontal: não quebra em várias linhas e não rouba altura dos produtos.
  * Roda do mouse rola para os lados; setas e esmaecido nas bordas aparecem quando há mais categorias escondidas.
  */
-export default function CategoryScroller({ items, counts, active, onSelect }: { items: string[]; counts: Record<string, number>; active: string; onSelect: (item: string) => void }) {
+export default function CategoryScroller({
+  items,
+  counts,
+  active,
+  onSelect,
+  label = "Categorias",
+}: {
+  items: readonly string[]
+  counts: Record<string, number>
+  active: string
+  onSelect: (item: string) => void
+  label?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const [edges, setEdges] = useState({ left: false, right: false })
 
@@ -41,7 +53,7 @@ export default function CategoryScroller({ items, counts, active, onSelect }: { 
 
   return (
     <div className="relative">
-      <div ref={ref} role="group" aria-label="Categorias" className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto scroll-px-1 px-1 py-0.5">
+      <div ref={ref} role="group" aria-label={label} className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto scroll-px-1 px-1 py-0.5">
         {items.map((item) => {
           const selected = active === item
           return (
@@ -63,7 +75,7 @@ export default function CategoryScroller({ items, counts, active, onSelect }: { 
       {edges.left && (
         <>
           <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--color-paper)] to-transparent" />
-          <button type="button" aria-label="Categorias anteriores" onClick={() => step(-1)} className={`${arrow} left-0`}>
+          <button type="button" aria-label={`${label}: anteriores`} onClick={() => step(-1)} className={`${arrow} left-0`}>
             <ChevronLeft className="h-4 w-4" />
           </button>
         </>
@@ -71,7 +83,7 @@ export default function CategoryScroller({ items, counts, active, onSelect }: { 
       {edges.right && (
         <>
           <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--color-paper)] to-transparent" />
-          <button type="button" aria-label="Próximas categorias" onClick={() => step(1)} className={`${arrow} right-0`}>
+          <button type="button" aria-label={`${label}: próximas`} onClick={() => step(1)} className={`${arrow} right-0`}>
             <ChevronRight className="h-4 w-4" />
           </button>
         </>
