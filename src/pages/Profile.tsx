@@ -36,8 +36,8 @@ export default function Profile() {
   if (isLoading || !profile) {
     return (
       <>
-        <PageHeader title="Meu perfil" description="Seus dados pessoais, a sua foto e as lojas em que você trabalha." />
-        {error ? <p role="alert" className="mt-8 text-sm font-medium text-[var(--color-alert)]">{error}</p> : <Skeleton className="mt-8 h-80 rounded-2xl" />}
+        <PageHeader title="Meu perfil" description="Seus dados, sua foto e suas lojas" />
+        {error ? <p role="alert" className="mt-5 text-sm font-medium text-[var(--color-alert)]">{error}</p> : <Skeleton className="mt-5 h-80 rounded-2xl" />}
       </>
     )
   }
@@ -75,9 +75,9 @@ export default function Profile() {
 
   return (
     <>
-      <PageHeader title="Meu perfil" description="Seus dados pessoais, a sua foto e as lojas em que você trabalha." />
+      <PageHeader title="Meu perfil" description="Seus dados, sua foto e suas lojas" />
 
-      <div className="mt-8 grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="mt-5 grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
         <Card className={card}>
           <form onSubmit={submit} noValidate>
             <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-center">

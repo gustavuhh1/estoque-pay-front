@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom"
 
 import AlertBanner from "@/components/AlertBanner"
 import CategoryScroller from "@/components/CategoryScroller"
+import PageHeader from "@/components/PageHeader"
 import CategoriesDialog from "@/components/stock/CategoriesDialog"
 import MovementDialog from "@/components/stock/MovementDialog"
 import ProductDialog from "@/components/stock/ProductDialog"
@@ -167,17 +168,11 @@ export default function Stock() {
 
   return (
     <>
-      {/* Título, resumo e ações numa linha só: a altura vai para a lista de produtos. */}
-      <section className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-[family-name:var(--font-display)] text-[26px] font-bold leading-tight tracking-[-0.02em] sm:text-[30px]">Estoque</h1>
-          {!isLoading && products.length > 0 && (
-            <p className="truncate text-sm text-[var(--color-slate)]">
-              {products.length} {products.length === 1 ? "produto" : "produtos"} na loja ativa
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+      <PageHeader
+        title="Estoque"
+        description={!isLoading && products.length > 0 ? `${products.length} ${products.length === 1 ? "produto" : "produtos"} na loja ativa` : undefined}
+        actions={
+          <>
           <Button variant="outline" onClick={() => setManagingCategories(true)} aria-label="Gerenciar categorias" title="Gerenciar categorias" className="px-3 sm:px-5">
             <List className="h-4 w-4" />
             <span className="hidden sm:inline">Categorias</span>
@@ -187,8 +182,9 @@ export default function Stock() {
             <span className="sm:hidden">Novo</span>
             <span className="hidden sm:inline">Adicionar produto</span>
           </Button>
-        </div>
-      </section>
+          </>
+        }
+      />
 
       {error && (
         <div className="mt-5">
