@@ -23,7 +23,7 @@ export default function DashboardHeader({ onOpenSidebar }: DashboardHeaderProps)
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
-            className="rounded-xl border border-[var(--color-border)] bg-white p-2.5 lg:hidden"
+            className="rounded-xl border border-[var(--color-border)] bg-white p-2.5 md:hidden"
             onClick={onOpenSidebar}
             aria-label="Abrir menu"
           >

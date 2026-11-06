@@ -221,7 +221,7 @@ export default function Pdv() {
           <div className="flex flex-col gap-3 border-b border-[var(--color-border)] bg-[var(--color-paper)] px-4 pb-3 pt-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2.5">
               {outlet?.openSidebar && (
-                <button type="button" aria-label="Abrir menu" onClick={outlet.openSidebar} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white lg:hidden">
+                <button type="button" aria-label="Abrir menu" onClick={outlet.openSidebar} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white md:hidden">
                   <Menu className="h-5 w-5" />
                 </button>
               )}
