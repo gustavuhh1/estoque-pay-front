@@ -3,6 +3,7 @@ import { useMemo, useState } from "react"
 
 import CategoryScroller from "@/components/CategoryScroller"
 import MetricCard from "@/components/MetricCard"
+import PageHeader from "@/components/PageHeader"
 import CashDialog from "@/components/sales/CashDialog"
 import NoteDialog from "@/components/sales/NoteDialog"
 import { Button } from "@/components/ui/button"
@@ -152,11 +153,10 @@ export default function Sales() {
 
   return (
     <>
-      {/* Título, situação do caixa e ações numa linha só. */}
-      <section className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-[family-name:var(--font-display)] text-[26px] font-bold leading-tight tracking-[-0.02em] sm:text-[30px]">Vendas</h1>
-          <p className="flex items-center gap-1.5 truncate text-sm text-[var(--color-slate)]">
+      <PageHeader
+        title="Vendas"
+        description={
+          <p className="flex items-center gap-1.5">
             <span className={`h-2 w-2 shrink-0 rounded-full ${shift ? "bg-[var(--color-green-500)]" : "bg-[#f59e0b]"}`} />
             {shift ? (
               <span className="truncate">
@@ -167,8 +167,9 @@ export default function Sales() {
               "Caixa fechado"
             )}
           </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+        }
+        actions={
+          <>
           <Button variant="outline" onClick={exportCsv} disabled={rows.length === 0} aria-label="Exportar CSV" title="Exportar as vendas da lista em CSV" className="px-3 sm:px-5">
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Exportar CSV</span>
@@ -184,8 +185,9 @@ export default function Sales() {
               Abrir caixa
             </Button>
           )}
-        </div>
-      </section>
+          </>
+        }
+      />
 
       <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4" aria-label="Resumo do turno">
         <MetricCard compact icon={Banknote} label="Faturamento" value={formatBRL(totals?.totalCents ?? 0)} badge={shift ? "Turno aberto" : "Caixa fechado"} tone={shift ? "brand" : "warning"} />

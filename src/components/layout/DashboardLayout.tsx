@@ -8,24 +8,16 @@ export default function DashboardLayout() {
   // Um layout só para todas as telas do painel: a sidebar não remonta ao trocar de tela e o estado é o mesmo em todas.
   const sidebar = useSidebar()
   const { pathname } = useLocation()
-  // O PDV ocupa a tela toda, sem o cabeçalho do painel; o botão de menu fica na barra do próprio PDV.
-  const fullBleed = pathname === "/pdv"
+  // O PDV usa o mesmo topo, mas ocupa o resto da tela sem margens (a altura é a da janela menos o topo).
+  const pdv = pathname === "/pdv"
 
   return (
     <div className={`min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] transition-[padding] duration-200 ${CONTENT_OFFSET[sidebar.mode]}`}>
       <DashboardSidebar mode={sidebar.mode} open={sidebar.open} onClose={sidebar.closeDrawer} onToggle={sidebar.canToggle ? sidebar.toggle : undefined} />
-      {fullBleed ? (
-        <main>
-          <Outlet context={{ openSidebar: sidebar.openDrawer }} />
-        </main>
-      ) : (
-        <>
-          <DashboardHeader onOpenSidebar={sidebar.openDrawer} />
-          <main className="mx-auto max-w-[1260px] px-4 py-8 sm:px-6 lg:px-10">
-            <Outlet />
-          </main>
-        </>
-      )}
+      <DashboardHeader onOpenSidebar={sidebar.openDrawer} pdv={pdv} />
+      <main className={pdv ? "" : "mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 sm:pt-6 lg:px-8"}>
+        <Outlet />
+      </main>
     </div>
   )
 }

@@ -1,7 +1,7 @@
-import { Check, CircleHelp, Clock, LayoutGrid, List, Menu, Minus, Package, Plus, ScanBarcode, Search, ShoppingCart, Trash2, X } from "lucide-react"
+import { Check, CircleHelp, Clock, LayoutGrid, List, Minus, Package, Plus, ScanBarcode, Search, ShoppingCart, Trash2, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { Link, useOutletContext } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 import CategoryScroller from "@/components/CategoryScroller"
 import PdvCheckout from "@/components/pdv/PdvCheckout"
@@ -94,8 +94,6 @@ export default function Pdv() {
   const [helpOpen, setHelpOpen] = useState(false)
   // Abaixo de md o carrinho fica escondido atrás da barra do total e abre em tela cheia.
   const [cartOpen, setCartOpen] = useState(false)
-  // O PDV não tem o cabeçalho do painel: abaixo de lg, o botão de menu daqui abre a barra lateral.
-  const outlet = useOutletContext<{ openSidebar?: () => void } | undefined>()
 
   // Com a API o Caixa não lista produtos (403): ele vende pela busca do PDV, por nome ou código de barras.
   const remoteOnly = config.useApi && activeStore.role === "Colaborador"
@@ -214,17 +212,12 @@ export default function Pdv() {
   useBarcodeScanner((code) => void onScan(code), { enabled: !paying && !helpOpen })
 
   return (
-    <div className="flex h-dvh min-w-0 flex-col">
+    <div className="flex h-[calc(100dvh-4rem)] min-w-0 flex-col">
       <div className="flex min-h-0 flex-1">
         <section className="flex min-w-0 flex-1 flex-col">
           {/* Barra única do PDV: busca, modo de exibição, ajuda e relógio na mesma linha; categorias rolando na horizontal logo abaixo. */}
           <div className="flex flex-col gap-3 border-b border-[var(--color-border)] bg-[var(--color-paper)] px-4 pb-3 pt-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2.5">
-              {outlet?.openSidebar && (
-                <button type="button" aria-label="Abrir menu" onClick={outlet.openSidebar} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white md:hidden">
-                  <Menu className="h-5 w-5" />
-                </button>
-              )}
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
               <input

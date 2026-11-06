@@ -116,7 +116,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
     <>
       <PageHeader
         title="Clientes"
-        description="Cadastro, histórico de compras e programa de fidelidade."
+        description="Cadastro, compras e fidelidade"
         actions={
           <>
             <Button variant="outline" onClick={() => setIssuing(true)} disabled={!limits.crmFull} title={limits.crmFull ? undefined : "Cupons de fidelidade são do plano Premium"}>
@@ -131,7 +131,7 @@ function CustomerManager({ storeId }: { storeId: string }) {
         }
       />
 
-      <div className="mt-6 grid items-start gap-4 sm:mt-8 lg:grid-cols-[1.35fr_1fr]">
+      <div className="mt-5 grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[0_10px_35px_rgba(13,28,46,0.05)] sm:p-5">
           <div className="relative mb-4">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />

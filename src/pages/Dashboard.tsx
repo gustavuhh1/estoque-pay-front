@@ -1,4 +1,4 @@
-import { Boxes, DollarSign, Package, Plus, ShoppingCart, TrendingUp, TriangleAlert } from "lucide-react"
+import { Boxes, DollarSign, Package, Plus, TrendingUp, TriangleAlert } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 
@@ -59,8 +59,8 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader
-        title="Painel de Indicadores"
-        description={`Visão geral da loja ${activeStore.name} em tempo real.`}
+        title="Painel"
+        description={`Indicadores de ${activeStore.name} em tempo real`}
         actions={
           <>
             <div role="group" aria-label="Período" className="flex gap-1 rounded-full bg-[var(--color-paper-dim)] p-1">
@@ -70,23 +70,17 @@ export default function Dashboard() {
                   type="button"
                   aria-pressed={period === key}
                   onClick={() => setPeriod(key)}
-                  className={`rounded-full px-[18px] py-2 text-[13px] font-bold transition ${period === key ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-slate)]"}`}
+                  className={`rounded-full px-3.5 py-2 text-[13px] font-bold transition sm:px-[18px] ${period === key ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-slate)]"}`}
                 >
                   {PERIOD_LABEL[key]}
                 </button>
               ))}
             </div>
-            <Button asChild variant="outline" className="px-3 sm:px-6">
-              <Link to="/pdv" aria-label="Abrir PDV">
-                <ShoppingCart className="h-4 w-4" />
-                <span className="hidden sm:inline">Abrir PDV</span>
-              </Link>
-            </Button>
           </>
         }
       />
 
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 xl:grid-cols-4">
+      <section className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <MetricCard
           compact="mobile"
           icon={DollarSign}

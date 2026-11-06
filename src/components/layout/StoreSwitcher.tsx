@@ -10,8 +10,8 @@ export default function StoreSwitcher() {
 
   return (
     <div className="relative min-w-0">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full max-w-[320px] items-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-[var(--color-amber)]/35 sm:min-w-[250px]">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"><Store className="h-4 w-4" /></span>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full max-w-[320px] items-center gap-3 rounded-xl border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-left shadow-sm transition hover:border-[var(--color-amber)]/35 sm:min-w-[240px]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"><Store className="h-4 w-4" /></span>
         <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[var(--color-ink)]">{activeStore.name}</span><span className="block truncate text-[11px] text-[var(--color-slate)]">Loja ativa</span></span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--color-slate)] transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

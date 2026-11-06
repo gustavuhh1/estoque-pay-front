@@ -134,7 +134,7 @@ export default function GlobalSearch() {
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
         autoComplete="off"
-        className={`h-12 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-12 text-sm font-medium outline-none transition-[box-shadow,background-color] duration-200 placeholder:text-[var(--color-slate)] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35 ${visible ? "bg-white shadow-[0_10px_30px_rgba(13,28,46,0.10)]" : ""}`}
+        className={`h-10 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-12 text-sm font-medium outline-none transition-[box-shadow,background-color] duration-200 placeholder:text-[var(--color-slate)] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35 ${visible ? "bg-white shadow-[0_10px_30px_rgba(13,28,46,0.10)]" : ""}`}
       />
       {!query && (
         <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-[var(--color-border)] bg-white px-2 py-0.5 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-slate)]">/</kbd>

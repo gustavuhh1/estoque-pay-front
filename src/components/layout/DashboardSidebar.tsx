@@ -54,10 +54,11 @@ export default function DashboardSidebar({ mode, open, onClose, onToggle }: Dash
           drawer ? `shadow-2xl ${open ? "translate-x-0" : "-translate-x-full"}` : "translate-x-0"
         }`}
       >
-        <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden py-6">
-          <div className={`flex items-center justify-between ${rail ? "justify-center" : "px-6"}`}>
+        <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden pb-6">
+          {/* Mesma altura e mesma linha de borda do topo das telas. */}
+          <div className={`flex h-16 shrink-0 items-center justify-between border-b border-[var(--color-border)] ${rail ? "justify-center" : "px-6"}`}>
             <Link to="/painel" className="flex items-center gap-3" onClick={onClose} title={tip("EstoquePay")}>
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-amber)] text-white">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-amber)] text-white">
                 <Boxes className="h-5 w-5" />
               </span>
               <span className={`whitespace-nowrap leading-tight ${hideText}`}>
@@ -72,7 +73,7 @@ export default function DashboardSidebar({ mode, open, onClose, onToggle }: Dash
             )}
           </div>
 
-          <nav className="mt-9" aria-label="Navegação principal">
+          <nav className="mt-4" aria-label="Navegação principal">
             {items.map(({ label, icon: Icon, to }) => (
               <NavLink
                 key={label}
@@ -81,7 +82,7 @@ export default function DashboardSidebar({ mode, open, onClose, onToggle }: Dash
                 onClick={onClose}
                 title={tip(label)}
                 className={({ isActive }) =>
-                  `flex h-[60px] items-center gap-4 whitespace-nowrap border-l-[3px] text-[15px] ${rail ? "justify-center" : "px-6"} ${
+                  `flex h-14 items-center gap-4 whitespace-nowrap border-l-[3px] text-[15px] ${rail ? "justify-center" : "px-6"} ${
                     isActive
                       ? "border-[var(--color-amber)] bg-white font-bold text-[var(--color-ink)]"
                       : "border-transparent font-medium text-[var(--color-slate)] hover:bg-white/60 hover:text-[var(--color-ink)]"
@@ -135,7 +136,7 @@ export default function DashboardSidebar({ mode, open, onClose, onToggle }: Dash
             aria-label={rail ? "Expandir menu" : "Recolher menu"}
             aria-expanded={!rail}
             title={rail ? "Expandir menu" : "Recolher menu"}
-            className="absolute -right-3.5 top-[34px] flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-slate)] shadow-sm transition hover:border-[var(--color-amber)]/50 hover:text-[var(--color-amber)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-amber)]"
+            className="absolute -right-3.5 top-[18px] flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-slate)] shadow-sm transition hover:border-[var(--color-amber)]/50 hover:text-[var(--color-amber)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-amber)]"
           >
             {rail ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
           </button>
