@@ -36,9 +36,9 @@ const TOPICS: Topic[] = [
     icon: Barcode,
     title: "Como usar o leitor de código",
     steps: [
-      "Deixe o cursor piscando na barra de busca do PDV.",
-      "Aponte o leitor para o código de barras e aperte o gatilho.",
-      "O produto entra no carrinho sozinho, com um apito.",
+      "Aponte o leitor para o código de barras e aperte o gatilho. Não precisa clicar na busca antes.",
+      "O produto entra no carrinho sozinho, com um bipe agudo e o nome dele ao lado da busca.",
+      "Bipe grave e aviso vermelho: o código não está cadastrado ou o produto acabou.",
       "Se não entrar, digite o nome do produto na barra de busca.",
     ],
   },
