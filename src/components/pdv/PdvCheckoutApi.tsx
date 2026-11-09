@@ -313,7 +313,7 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
                   setMethod(value)
                   setError("")
                 }}
-                className={`flex h-11 items-center gap-2 rounded-xl px-5 text-xs font-bold uppercase tracking-[0.08em] transition ${
+                className={`flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 [&>svg]:shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] transition sm:flex-none sm:gap-2 sm:px-5 sm:text-xs sm:tracking-[0.08em] ${
                   active ? "bg-[var(--color-amber)] text-white" : "text-[var(--color-slate)] hover:text-[var(--color-ink)]"
                 }`}
               >

@@ -338,7 +338,7 @@ export default function Stock() {
                     <TableHead scope="col" className="text-center">
                       Qtd. atual
                     </TableHead>
-                    <TableHead scope="col" className="text-center">
+                    <TableHead scope="col" className="hidden text-center lg:table-cell">
                       Status
                     </TableHead>
                     <TableHead scope="col" className="pr-5 text-right">
@@ -358,6 +358,11 @@ export default function Stock() {
                               <span className="lg:hidden">{product.sku} · </span>
                               {product.category} · {product.unit}
                             </p>
+                            {(!product.active || stockStatus(product) !== "normal") && (
+                              <div className="mt-1 lg:hidden">
+                                <StatusPill product={product} />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -371,7 +376,7 @@ export default function Stock() {
                       <TableCell className="py-2.5 text-center">
                         <strong className={`text-xl font-extrabold tabular-nums ${quantityTone(product)}`}>{formatQuantity(product.stock)}</strong>
                       </TableCell>
-                      <TableCell className="py-2.5 text-center">
+                      <TableCell className="hidden py-2.5 text-center lg:table-cell">
                         <StatusPill product={product} />
                       </TableCell>
                       <TableCell className="py-2.5 pr-5 text-right">
@@ -387,7 +392,7 @@ export default function Stock() {
       </Card>
 
       <Card className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
-        <div className="border-b border-[var(--color-border)] px-5 py-5 sm:px-6">
+        <div className="border-b border-[var(--color-border)] px-4 py-4 sm:px-6 sm:py-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--color-slate)]">Rastreabilidade</p>
           <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold">Histórico de movimentações</h2>
         </div>
@@ -398,25 +403,31 @@ export default function Stock() {
             <caption className="sr-only">Últimas movimentações de estoque</caption>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Data</TableHead>
+                <TableHead scope="col" className="hidden sm:table-cell">
+                  Data
+                </TableHead>
                 <TableHead scope="col">Produto</TableHead>
                 <TableHead scope="col">Tipo</TableHead>
                 <TableHead scope="col" className="text-right">
                   Variação
                 </TableHead>
-                <TableHead scope="col" className="text-right">
+                <TableHead scope="col" className="hidden text-right sm:table-cell">
                   Saldo
                 </TableHead>
-                <TableHead scope="col">Motivo</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell">
+                  Motivo
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {movements.slice(0, MOVEMENT_HISTORY_LIMIT).map((movement) => (
                 <TableRow key={movement.id}>
-                  <TableCell className="whitespace-nowrap text-[var(--color-slate)]">{formatDateTime(movement.createdAt)}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-[var(--color-slate)] sm:table-cell">{formatDateTime(movement.createdAt)}</TableCell>
                   <TableCell>
                     <p className="font-semibold">{movement.productName}</p>
                     <p className="font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-slate)]">{movement.sku}</p>
+                    <p className="text-[11px] text-[var(--color-slate)] sm:hidden">{formatDateTime(movement.createdAt)}</p>
+                    {movement.reason && <p className="text-xs text-[var(--color-slate)] md:hidden">{movement.reason}</p>}
                   </TableCell>
                   <TableCell>
                     <MovementBadge type={movement.type} />
@@ -424,8 +435,8 @@ export default function Stock() {
                   <TableCell className={`text-right font-semibold tabular-nums ${movement.delta < 0 ? "text-[var(--color-alert-dark)]" : "text-[var(--color-stock-green)]"}`}>
                     {movement.delta > 0 ? `+${formatQuantity(movement.delta)}` : formatQuantity(movement.delta)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{formatQuantity(movement.balance)}</TableCell>
-                  <TableCell className="text-[var(--color-slate)]">{movement.reason}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatQuantity(movement.balance)}</TableCell>
+                  <TableCell className="hidden text-[var(--color-slate)] md:table-cell">{movement.reason}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
