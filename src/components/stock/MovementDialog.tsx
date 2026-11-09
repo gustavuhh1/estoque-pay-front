@@ -9,6 +9,8 @@ import { formatQuantity, parseQuantity } from "@/lib/format"
 import { roundQty } from "@/inventory/logic"
 import type { MoveInput } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import { beep } from "@/scanner/beep"
+import { SCAN_PRIORITY, useBarcodeScanner } from "@/scanner/useBarcodeScanner"
 
 const typeHelp: Record<MoveInput["type"], { quantity: string; reason: string }> = {
   entrada: { quantity: "Quantidade que entrou", reason: "Motivo (opcional)" },
@@ -33,6 +35,18 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
   const [reason, setReason] = useState("")
   const [error, setError] = useState("")
 
+  // Leitor de código de barras: bipar a mercadoria escolhe o produto (ex.: entrada de reposição).
+  useBarcodeScanner(
+    (code) => {
+      const found = products.find((item) => item.ean === code || item.sku.toLowerCase() === code.toLowerCase())
+      beep(found ? "ok" : "erro")
+      if (!found) return setError(`Código ${code} não encontrado entre os produtos ativos.`)
+      setProductId(found.id)
+      setError("")
+    },
+    { priority: SCAN_PRIORITY.dialog },
+  )
+
   const product = products.find((item) => item.id === productId)
   const parsed = parseQuantity(quantity)
   const preview =
@@ -51,7 +65,7 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
   return (
     <Dialog open onClose={onClose} title="Registrar movimentação" description="Entradas, saídas e ajustes ficam registrados no histórico.">
       <form onSubmit={submit} noValidate className="space-y-4">
-        <Field id="mv-product" label="Produto">
+        <Field id="mv-product" label="Produto" hint="Ou bipe o produto com o leitor.">
           <Select
             id="mv-product"
             value={productId}

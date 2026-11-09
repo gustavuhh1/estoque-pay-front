@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Filter, List, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { ArrowDownToLine, Filter, List, Package, Pencil, Plus, ScanBarcode, Search, Trash2 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
@@ -19,6 +19,8 @@ import { missingFiscal, stockStatus } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
 import { usePlan } from "@/billing/plan"
+import { beep } from "@/scanner/beep"
+import { useBarcodeScanner } from "@/scanner/useBarcodeScanner"
 
 const MOVEMENT_HISTORY_LIMIT = 15
 
@@ -70,6 +72,28 @@ export default function Stock() {
   const [removing, setRemoving] = useState<Product | null>(null)
   const [toast, setToast] = useState<{ title: string; message?: string; tone: ToastTone } | null>(null)
   const closeToast = useCallback(() => setToast(null), [])
+
+  // Leitor de código de barras: bipar filtra a lista pelo código; código sem produto oferece o cadastro com ele.
+  // Os diálogos de produto e de movimentação têm o próprio tratamento (prioridade maior).
+  const [newEan, setNewEan] = useState("")
+  const [unknownCode, setUnknownCode] = useState<string | null>(null)
+  useBarcodeScanner(
+    (code) => {
+      const found = products.some((product) => product.ean === code || product.sku.toLowerCase() === code.toLowerCase())
+      beep(found ? "ok" : "erro")
+      setQuery(code)
+      setShowSearch(true)
+      setCategory("Todos")
+      setOnlyCritical(false)
+      setUnknownCode(found ? null : code)
+    },
+    { enabled: !managingCategories && removing === null },
+  )
+  function registerUnknown() {
+    setNewEan(unknownCode ?? "")
+    setUnknownCode(null)
+    setEditing("new")
+  }
 
   const chips = useMemo(() => {
     const used = products.map((product) => product.category).filter((name) => !categories.includes(name))
@@ -170,7 +194,40 @@ export default function Stock() {
       {showSearch && (
         <div className="relative mb-5 max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
-          <Input aria-label="Buscar no estoque" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, SKU ou código de barras" className="pl-9" autoFocus />
+          <Input
+            aria-label="Buscar no estoque"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setUnknownCode(null)
+            }}
+            placeholder="Bipe o código de barras ou busque por nome ou SKU"
+            className="pl-9 pr-10"
+            autoFocus
+          />
+          <ScanBarcode className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
+        </div>
+      )}
+
+      {unknownCode && (
+        <div role="status" className="search-item-enter mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-white px-5 py-4 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
+          <p className="flex items-center gap-3 text-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-nav)] text-[var(--color-slate)]">
+              <ScanBarcode className="h-4 w-4" />
+            </span>
+            <span>
+              Nenhum produto com o código <strong className="font-[family-name:var(--font-mono)]">{unknownCode}</strong>.
+            </span>
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setUnknownCode(null)}>
+              Dispensar
+            </Button>
+            <Button variant="accent" size="sm" onClick={registerUnknown}>
+              <Plus className="h-4 w-4" />
+              Cadastrar com este código
+            </Button>
+          </div>
         </div>
       )}
 
@@ -324,9 +381,14 @@ export default function Stock() {
       {editing !== null && (
         <ProductDialog
           product={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
+          initialEan={editing === "new" ? newEan : undefined}
+          onClose={() => {
+            setEditing(null)
+            setNewEan("")
+          }}
           onSaved={(message) => {
             setEditing(null)
+            setNewEan("")
             setToast({ title: "Produto salvo", message, tone: "success" })
           }}
         />

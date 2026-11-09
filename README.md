@@ -34,6 +34,20 @@ Acesse http://localhost:5173. Com `VITE_API_URL` vazio o front roda em modo demo
 | `/estoque`, `/clientes`, `/ajustes` | Estoque, CRM, equipe, fiscal e assinatura | Owner e Gestor |
 | `/403`, `/erro-rede`, `*` | Sem permissão, erro de conexão e 404 | — |
 
+## Leitor de código de barras
+
+Funciona com qualquer leitor USB ou Bluetooth no modo teclado (HID), o padrão de fábrica: não precisa de driver nem de clicar num campo antes. O app reconhece a leitura pelo ritmo (6+ caracteres digitados em poucos milissegundos) e a separa da digitação humana (`src/scanner/useBarcodeScanner.ts`).
+
+| Onde | O que a leitura faz |
+| --- | --- |
+| PDV | Coloca o produto no carrinho (bipe agudo); código desconhecido ou sem estoque avisa (bipe grave) |
+| Estoque | Filtra pelo código; se não existir, oferece "Cadastrar com este código" |
+| Novo/editar produto | Preenche o EAN, mesmo com o foco em outro campo; avisa se o código já é de outro produto |
+| Movimentação | Escolhe o produto |
+| Demais telas do painel | Abre o Estoque filtrado pelo código |
+
+Configure o leitor para enviar **Enter** no fim da leitura (é o padrão; Tab ou nenhum sufixo também funcionam) e com o layout de teclado igual ao do computador.
+
 ## Estrutura
 
 ```
@@ -42,6 +56,7 @@ src/
   components/   ui/ (base shadcn) e componentes por área (pdv, sales, stock, settings...)
   auth/ store/  sessão (Better Auth) e loja ativa
   inventory/ pdv/ caixa/ customers/ team/ billing/ dashboard/   estado e chamadas de cada área
+  scanner/      leitor de código de barras (detecção e bipe)
   config.ts     única leitura de import.meta.env
   index.css     tokens de design (@theme do Tailwind v4)
 ```

@@ -6,6 +6,7 @@ import { formatBRL, formatQuantity, normalizeText } from "@/lib/format"
 import { stockStatus } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import { useBarcodeScanner } from "@/scanner/useBarcodeScanner"
 
 const MAX_RESULTS = 5
 
@@ -73,6 +74,10 @@ export default function GlobalSearch() {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
+
+  // Leitor de código de barras nas telas sem tratamento próprio (Painel, Vendas...): abre o Estoque filtrado pelo código.
+  // O Estoque, o PDV e os diálogos de produto registram handlers de prioridade maior.
+  useBarcodeScanner((code) => navigate(`/estoque?busca=${encodeURIComponent(code)}`), { priority: 0 })
 
   function go(product?: Product) {
     const busca = product ? product.name : query.trim()

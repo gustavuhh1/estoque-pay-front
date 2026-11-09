@@ -1,4 +1,4 @@
-import { Save } from "lucide-react"
+import { Save, ScanBarcode } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import Field from "@/components/Field"
@@ -13,6 +13,8 @@ import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
 import { usePlan } from "@/billing/plan"
 import { config } from "@/config"
+import { beep } from "@/scanner/beep"
+import { SCAN_PRIORITY, useBarcodeScanner } from "@/scanner/useBarcodeScanner"
 import { useStores } from "@/store/useStores"
 
 const mono = "font-[family-name:var(--font-mono)]"
@@ -42,18 +44,33 @@ const toForm = (product: Product | null, firstCategory: string, defaultCfop: str
 type ProductDialogProps = {
   /** Produto em edição, ou null para cadastrar um novo. */
   product: Product | null
+  /** Código já lido pelo leitor (ex.: bipado no Estoque e não encontrado) para um produto novo. */
+  initialEan?: string
   onClose: () => void
   onSaved: (message: string) => void
 }
 
-export default function ProductDialog({ product, onClose, onSaved }: ProductDialogProps) {
+export default function ProductDialog({ product, initialEan = "", onClose, onSaved }: ProductDialogProps) {
   const { activeStore } = useStores()
   const { products, categories, createProduct, updateProduct } = useInventory()
   const { nfceOn: nfceEnabled, limits } = usePlan()
 
-  const [form, setForm] = useState<RawProductForm>(() => toForm(product, categories[0] ?? "", activeStore.cfopDefault ?? ""))
+  const [form, setForm] = useState<RawProductForm>(() => ({ ...toForm(product, categories[0] ?? "", activeStore.cfopDefault ?? ""), ...(product ? {} : { ean: initialEan }) }))
+  const [scannedAt, setScannedAt] = useState<number | null>(null)
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [formError, setFormError] = useState("")
+
+  // Leitor de código de barras: com o diálogo aberto, a leitura vai para o campo EAN, esteja o foco onde estiver.
+  useBarcodeScanner(
+    (code) => {
+      const taken = products.find((item) => item.ean === code && item.id !== product?.id)
+      setForm((current) => ({ ...current, ean: code }))
+      setErrors((current) => ({ ...current, ean: taken ? `Este código já está em uso em "${taken.name}".` : undefined }))
+      setScannedAt(Date.now())
+      beep(taken ? "erro" : "ok")
+    },
+    { priority: SCAN_PRIORITY.dialog },
+  )
 
   const set = (key: Exclude<keyof RawProductForm, "active">) => (event: { target: { value: string } }) => {
     setForm((current) => ({ ...current, [key]: event.target.value }))
@@ -108,8 +125,19 @@ export default function ProductDialog({ product, onClose, onSaved }: ProductDial
               <Input id="name" value={form.name} onChange={set("name")} placeholder="Ex: Café Bourbon Special" autoFocus {...aria("name")} />
             </Field>
           </div>
-          <Field id="ean" label="Código de barras (EAN/GTIN)" error={errors.ean}>
-            <Input id="ean" value={form.ean} onChange={set("ean")} inputMode="numeric" placeholder="7891000315507" className={mono} {...aria("ean")} />
+          <Field id="ean" label="Código de barras (EAN/GTIN)" error={errors.ean} hint={errors.ean ? undefined : "Bipe o produto com o leitor para preencher."}>
+            <div className="relative">
+              <Input
+                id="ean"
+                value={form.ean}
+                onChange={set("ean")}
+                inputMode="numeric"
+                placeholder="7891000315507"
+                className={`${mono} pr-10 ${scannedAt && !errors.ean ? "search-item-enter border-[var(--color-green-500)] bg-[var(--color-stock-green-soft)]" : ""}`}
+                {...aria("ean")}
+              />
+              <ScanBarcode className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
+            </div>
           </Field>
           <Field id="unit" label="Tipo de medida" error={errors.unit}>
             <Select id="unit" value={form.unit} onChange={set("unit")} {...aria("unit")}>

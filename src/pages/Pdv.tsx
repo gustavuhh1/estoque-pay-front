@@ -1,4 +1,4 @@
-import { Bell, Check, Clock, LayoutGrid, List, Minus, Package, Plus, Search, ShoppingCart, Trash2 } from "lucide-react"
+import { Bell, Check, Clock, LayoutGrid, List, Minus, Package, Plus, ScanBarcode, Search, ShoppingCart, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Link } from "react-router-dom"
@@ -15,6 +15,8 @@ import { useInventory } from "@/inventory/useInventory"
 import { useCash } from "@/caixa/useCash"
 import { config } from "@/config"
 import { searchProducts } from "@/pdv/pdvApi"
+import { beep } from "@/scanner/beep"
+import { useBarcodeScanner } from "@/scanner/useBarcodeScanner"
 import { useStores } from "@/store/useStores"
 
 type CartLine = { productId: string; quantity: number }
@@ -23,6 +25,12 @@ type ViewMode = "blocos" | "lista"
 // Sem SEFAZ: a NFC-e é simulada (D3).
 const STATUS = ["Impressora conectada", "Leitor conectado"]
 const label = "text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-slate)]"
+
+/** Produto cujo código de barras (EAN) ou SKU é exatamente o código lido/digitado. */
+const findByCode = (products: Product[], code: string) => {
+  const wanted = code.trim().toLowerCase()
+  return wanted ? products.find((product) => product.ean.toLowerCase() === wanted || product.sku.toLowerCase() === wanted) : undefined
+}
 
 /** Passo do botão +/−: unidades inteiras ou décimos para produtos fracionados. */
 const stepOf = (product: Product) => (isFractionalUnit(product.unit) ? 0.1 : 1)
@@ -135,7 +143,10 @@ export default function Pdv() {
   function add(product: Product, amount = 1) {
     const inCart = cart.find((line) => line.productId === product.id)?.quantity ?? 0
     const remaining = roundQty(product.stock - inCart)
-    if (remaining <= 0) return setMessage(`Sem estoque disponível de "${product.name}".`)
+    if (remaining <= 0) {
+      setMessage(`Sem estoque disponível de "${product.name}".`)
+      return false
+    }
     const quantity = Math.min(amount, remaining)
     setMessage("")
     setCart((current) =>
@@ -143,6 +154,7 @@ export default function Pdv() {
         ? current.map((line) => (line.productId === product.id ? { ...line, quantity: roundQty(line.quantity + quantity) } : line))
         : [...current, { productId: product.id, quantity }],
     )
+    return true
   }
 
   function change(product: Product, direction: 1 | -1) {
@@ -156,16 +168,42 @@ export default function Pdv() {
     )
   }
 
-  // Leitor de código: Enter com um EAN ou SKU exato coloca o produto no carrinho.
+  // Enter com um EAN ou SKU exato digitado na busca coloca o produto no carrinho.
   function onSearchEnter() {
-    const code = query.trim().toLowerCase()
-    if (!code) return
-    const exact = active.find((product) => product.ean === code || product.sku.toLowerCase() === code)
+    const exact = findByCode(active, query)
     if (exact) {
       add(exact)
       setQuery("")
     }
   }
+
+  // Leitor de código de barras: bipou, entrou no carrinho, com o foco em qualquer lugar da tela.
+  // O Caixa não tem a lista de produtos (API), então a leitura consulta a busca da API na hora.
+  const [scanned, setScanned] = useState<{ text: string; ok: boolean; at: number } | null>(null)
+  useEffect(() => {
+    if (!scanned) return
+    const timer = setTimeout(() => setScanned(null), 2500)
+    return () => clearTimeout(timer)
+  }, [scanned])
+
+  async function onScan(code: string) {
+    let found = findByCode(remoteOnly ? [] : source, code)
+    if (remoteOnly) {
+      const remoteFound = await searchProducts(code).catch(() => [])
+      setKnown((current) => ({ ...current, ...Object.fromEntries(remoteFound.map((product) => [product.id, product])) }))
+      found = findByCode(remoteFound, code)
+    }
+    const fail = (text: string) => {
+      beep("erro")
+      setScanned({ text, ok: false, at: Date.now() })
+    }
+    if (!found) return fail(`Código ${code} não cadastrado.`)
+    if (!found.active) return fail(`${found.name} está inativo.`)
+    if (!add(found)) return fail(`Sem estoque de ${found.name}.`)
+    beep("ok")
+    setScanned({ text: `${found.name} adicionado`, ok: true, at: Date.now() })
+  }
+  useBarcodeScanner((code) => void onScan(code), { enabled: !paying && !helpOpen })
 
   const name = session?.user.name ?? "Usuário"
 
@@ -206,6 +244,18 @@ export default function Pdv() {
                 className="h-12 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-14 text-sm font-medium outline-none placeholder:text-[var(--color-slate)] focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35"
               />
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-0.5 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-slate)]">F2</kbd>
+              {scanned && (
+                <p
+                  key={scanned.at}
+                  role="status"
+                  className={`search-item-enter absolute right-14 top-1/2 flex max-w-[60%] -translate-y-1/2 items-center gap-2 truncate rounded-lg px-3 py-1.5 text-[13px] font-bold ${
+                    scanned.ok ? "bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]" : "bg-[var(--color-alert-soft)] text-[var(--color-alert-dark)]"
+                  }`}
+                >
+                  <ScanBarcode className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{scanned.text}</span>
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex min-w-0 flex-1 flex-wrap gap-2.5">
