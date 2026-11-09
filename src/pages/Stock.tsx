@@ -325,7 +325,7 @@ export default function Stock() {
                     <TableHead scope="col" className="pl-5">
                       Produto
                     </TableHead>
-                    <TableHead scope="col" className="hidden lg:table-cell">
+                    <TableHead scope="col" className="hidden xl:table-cell">
                       SKU / Código
                     </TableHead>
                     <TableHead scope="col" className="text-right">
@@ -334,7 +334,7 @@ export default function Stock() {
                     <TableHead scope="col" className="text-center">
                       Qtd. atual
                     </TableHead>
-                    <TableHead scope="col" className="hidden text-center lg:table-cell">
+                    <TableHead scope="col" className="hidden text-center xl:table-cell">
                       Status
                     </TableHead>
                     <TableHead scope="col" className="pr-5 text-right">
@@ -351,18 +351,18 @@ export default function Stock() {
                           <div className="min-w-0">
                             <p className="truncate text-[15px] font-bold">{product.name}</p>
                             <p className="truncate font-[family-name:var(--font-mono)] text-xs text-[var(--color-slate)]">
-                              <span className="lg:hidden">{product.sku} · </span>
+                              <span className="xl:hidden">{product.sku} · </span>
                               {product.category} · {product.unit}
                             </p>
                             {(!product.active || stockStatus(product) !== "normal") && (
-                              <div className="mt-1 lg:hidden">
+                              <div className="mt-1 xl:hidden">
                                 <StatusPill product={product} />
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden py-2.5 lg:table-cell">
+                      <TableCell className="hidden py-2.5 xl:table-cell">
                         <span className="rounded bg-[var(--color-paper-dim)] px-2.5 py-1.5 font-[family-name:var(--font-mono)] text-xs">{product.sku}</span>
                       </TableCell>
                       <TableCell className="py-2.5 text-right">
@@ -372,7 +372,7 @@ export default function Stock() {
                       <TableCell className="py-2.5 text-center">
                         <strong className={`text-xl font-extrabold tabular-nums ${quantityTone(product)}`}>{formatQuantity(product.stock)}</strong>
                       </TableCell>
-                      <TableCell className="hidden py-2.5 text-center lg:table-cell">
+                      <TableCell className="hidden py-2.5 text-center xl:table-cell">
                         <StatusPill product={product} />
                       </TableCell>
                       <TableCell className="py-2.5 pr-5 text-right">

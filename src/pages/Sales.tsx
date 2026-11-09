@@ -275,7 +275,7 @@ export default function Sales() {
                     <TableHead scope="col" className="pl-5">
                       Venda
                     </TableHead>
-                    <TableHead scope="col" className="hidden lg:table-cell">
+                    <TableHead scope="col" className="hidden xl:table-cell">
                       Cliente
                     </TableHead>
                     <TableHead scope="col" className="text-center">
@@ -299,12 +299,12 @@ export default function Sales() {
                       <TableRow key={sale.id} data-row>
                         <TableCell className="py-2.5 pl-5">
                           <p className="font-[family-name:var(--font-mono)] font-bold">{saleLabel(sale)}</p>
-                          <p className="max-w-[220px] truncate text-[13px] text-[#94a3b8]">
+                          <p className="max-w-[180px] truncate text-[13px] xl:max-w-[220px] text-[#94a3b8]">
                             {timeFormatter.format(sale.createdAt)} · {sale.operator ?? "—"}
-                            <span className="lg:hidden"> · {sale.customerName ?? "Consumidor não identificado"}</span>
+                            <span className="xl:hidden"> · {sale.customerName ?? "Consumidor não identificado"}</span>
                           </p>
                         </TableCell>
-                        <TableCell className="hidden max-w-[220px] truncate py-2.5 lg:table-cell">{sale.customerName ?? "Consumidor não identificado"}</TableCell>
+                        <TableCell className="hidden max-w-[220px] truncate py-2.5 xl:table-cell">{sale.customerName ?? "Consumidor não identificado"}</TableCell>
                         <TableCell className="py-2.5 text-center">
                           <span className={`${pill} bg-[var(--color-paper-dim)] text-[var(--color-slate)]`}>{PAYMENT_LABELS[sale.payment]}</span>
                         </TableCell>

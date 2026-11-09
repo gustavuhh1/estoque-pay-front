@@ -151,10 +151,10 @@ function CustomerManager({ storeId }: { storeId: string }) {
                 <TableHead scope="col" className="text-center">
                   Compras
                 </TableHead>
-                <TableHead scope="col" className="hidden whitespace-nowrap text-right sm:table-cell">
+                <TableHead scope="col" className="hidden whitespace-nowrap text-right sm:table-cell lg:hidden xl:table-cell">
                   Ticket médio
                 </TableHead>
-                <TableHead scope="col" className="hidden text-right sm:table-cell">
+                <TableHead scope="col" className="hidden text-right sm:table-cell lg:hidden xl:table-cell">
                   Cupons
                 </TableHead>
               </TableRow>
@@ -181,10 +181,10 @@ function CustomerManager({ storeId }: { storeId: string }) {
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">
                       {row.count}
-                      <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden">{formatBRL(row.ticketCents)}</span>
+                      <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden lg:block xl:hidden">{formatBRL(row.ticketCents)}</span>
                     </TableCell>
-                    <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell">{formatBRL(row.ticketCents)}</TableCell>
-                    <TableCell className="hidden whitespace-nowrap text-right sm:table-cell">
+                    <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell lg:hidden xl:table-cell">{formatBRL(row.ticketCents)}</TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-right sm:table-cell lg:hidden xl:table-cell">
                       <Badge active={count > 0}>{`${count} ${count === 1 ? "ativo" : "ativos"}`}</Badge>
                     </TableCell>
                   </TableRow>
@@ -203,10 +203,10 @@ function CustomerManager({ storeId }: { storeId: string }) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-center font-medium tabular-nums">
                     {walkIn.count}
-                    <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden">{formatBRL(walkIn.ticketCents)}</span>
+                    <span className="block text-[11px] font-semibold text-[var(--color-slate)] sm:hidden lg:block xl:hidden">{formatBRL(walkIn.ticketCents)}</span>
                   </TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell">{formatBRL(walkIn.ticketCents)}</TableCell>
-                  <TableCell className="hidden whitespace-nowrap text-right sm:table-cell">
+                  <TableCell className="hidden whitespace-nowrap text-right font-bold tabular-nums sm:table-cell lg:hidden xl:table-cell">{formatBRL(walkIn.ticketCents)}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap text-right sm:table-cell lg:hidden xl:table-cell">
                     <Badge active={false}>0 ativos</Badge>
                   </TableCell>
                 </TableRow>
