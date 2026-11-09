@@ -42,8 +42,8 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/lojas" element={<StoreSelection />} />
                 <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/painel" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
                 <Route element={<DashboardLayout />}>
+                  <Route path="/painel" element={<Dashboard />} />
                   <Route path="/pdv" element={<Pdv />} />
                   <Route path="/vendas" element={<Sales />} />
                   <Route path="/estoque" element={<Stock />} />
