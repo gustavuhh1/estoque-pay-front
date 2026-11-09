@@ -94,7 +94,7 @@ export default function Dashboard() {
         <MetricCard compact="mobile" icon={Boxes} tone="danger" label="Capital imobilizado" value={formatBRL(stockValueCents(active))} badge="Estoque" badgeTone="neutral" />
       </section>
 
-      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.6fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 xl:grid-cols-[1.6fr_1fr]">
         <Panel title="Faturamento" note={`${metrics.count} ${metrics.count === 1 ? "venda" : "vendas"} · ticket médio ${formatBRL(metrics.ticketCents)}`}>
           <div className="flex h-[150px] items-end gap-2 border-b sm:h-[220px] sm:gap-3.5 border-[var(--color-border)] px-1 pt-2" role="img" aria-label={`Faturamento ${label}`}>
             {metrics.series.map((bar) => {
@@ -140,7 +140,7 @@ export default function Dashboard() {
         </Panel>
       </section>
 
-      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.05fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 xl:grid-cols-[1.05fr_1fr]">
         <Panel title="Top Vendidos" action={{ label: "Ver tudo", to: "/estoque" }}>
           {metrics.top.length === 0 ? (
             <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda no período.</p>
@@ -205,7 +205,7 @@ export default function Dashboard() {
         </Panel>
       </section>
 
-      <section className="mt-4 grid gap-4 sm:mt-8 lg:grid-cols-[1.05fr_1fr]">
+      <section className="mt-4 grid gap-4 sm:mt-8 xl:grid-cols-[1.05fr_1fr]">
         <Panel title="Últimas vendas" action={{ label: "Histórico", to: "/vendas" }}>
           {recentSales.length === 0 ? (
             <p className="py-8 text-center text-sm text-[var(--color-slate)]">Nenhuma venda registrada ainda.</p>
