@@ -79,6 +79,14 @@ input {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Faixas com rolagem horizontal (categorias do PDV): rola com toque, roda ou setas, sem barra visível. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Toast: entra deslizando e a barra de baixo marca o tempo até fechar sozinho. */
 @keyframes toast-in {
   from {

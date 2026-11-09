@@ -1,9 +1,8 @@
-import { Bell, Check, Clock, LayoutGrid, List, Minus, Package, Plus, ScanBarcode, Search, ShoppingCart, Trash2 } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, CircleHelp, Clock, LayoutGrid, List, Menu, Minus, Package, Plus, ScanBarcode, Search, ShoppingCart, Trash2, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { Link } from "react-router-dom"
+import { Link, useOutletContext } from "react-router-dom"
 
-import { useAuth } from "@/auth/useAuth"
 import PdvCheckout from "@/components/pdv/PdvCheckout"
 import PdvCheckoutApi from "@/components/pdv/PdvCheckoutApi"
 import PdvHelp from "@/components/pdv/PdvHelp"
@@ -77,8 +76,86 @@ function StockBadge({ product }: { product: Product }) {
 
 const Checkout = config.useApi ? PdvCheckoutApi : PdvCheckout
 
+/**
+ * Categorias numa linha só, rolando na horizontal: não quebra em várias linhas e não rouba altura dos produtos.
+ * Roda do mouse rola para os lados; setas e esmaecido nas bordas aparecem quando há mais categorias escondidas.
+ */
+function CategoryScroller({ items, counts, active, onSelect }: { items: string[]; counts: Record<string, number>; active: string; onSelect: (item: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [edges, setEdges] = useState({ left: false, right: false })
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const update = () => setEdges({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+    // Roda vertical do mouse vira rolagem horizontal (só quando há o que rolar).
+    const onWheel = (event: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
+      event.preventDefault()
+      el.scrollLeft += event.deltaY
+    }
+    update()
+    el.addEventListener("scroll", update, { passive: true })
+    el.addEventListener("wheel", onWheel, { passive: false })
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener("scroll", update)
+      el.removeEventListener("wheel", onWheel)
+      observer.disconnect()
+    }
+  }, [items.length])
+
+  // A categoria escolhida fica sempre visível (ex.: escolhida pelo teclado ou depois de redimensionar).
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" })
+  }, [active])
+
+  const step = (direction: 1 | -1) => ref.current?.scrollBy({ left: direction * ref.current.clientWidth * 0.7, behavior: "smooth" })
+  const arrow = "absolute top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--color-border)] bg-white text-[var(--color-ink)] shadow-sm transition hover:border-[var(--color-green-500)]/50 md:flex"
+
+  return (
+    <div className="relative">
+      <div ref={ref} role="group" aria-label="Categorias" className="no-scrollbar -mx-1 flex snap-x gap-2 overflow-x-auto scroll-px-1 px-1 py-0.5">
+        {items.map((item) => {
+          const selected = active === item
+          return (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(item)}
+              className={`flex h-10 shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-full border pl-4 pr-3 text-sm font-bold transition ${
+                selected ? "border-[var(--color-amber)] bg-[var(--color-amber)] text-white" : "border-[var(--color-border)] bg-white hover:border-[var(--color-green-500)]/50"
+              }`}
+            >
+              {item}
+              <span className={`min-w-6 rounded-full px-1.5 text-center text-[11px] tabular-nums ${selected ? "bg-white/20" : "bg-[var(--color-nav)] text-[var(--color-slate)]"}`}>{counts[item] ?? 0}</span>
+            </button>
+          )
+        })}
+      </div>
+      {edges.left && (
+        <>
+          <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[var(--color-paper)] to-transparent" />
+          <button type="button" aria-label="Categorias anteriores" onClick={() => step(-1)} className={`${arrow} left-0`}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </>
+      )}
+      {edges.right && (
+        <>
+          <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--color-paper)] to-transparent" />
+          <button type="button" aria-label="Próximas categorias" onClick={() => step(1)} className={`${arrow} right-0`}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Pdv() {
-  const { session } = useAuth()
   const { activeStore } = useStores()
   const { products, isLoading } = useInventory()
   const searchRef = useRef<HTMLInputElement>(null)
@@ -93,6 +170,10 @@ export default function Pdv() {
   const cash = useCash()
   const cashOpen = Boolean(cash.shift)
   const [helpOpen, setHelpOpen] = useState(false)
+  // Abaixo de md o carrinho fica escondido atrás da barra do total e abre em tela cheia.
+  const [cartOpen, setCartOpen] = useState(false)
+  // O PDV não tem o cabeçalho do painel: abaixo de lg, o botão de menu daqui abre a barra lateral.
+  const outlet = useOutletContext<{ openSidebar?: () => void } | undefined>()
 
   // Com a API o Caixa não lista produtos (403): ele vende pela busca do PDV, por nome ou código de barras.
   const remoteOnly = config.useApi && activeStore.role === "Colaborador"
@@ -118,12 +199,17 @@ export default function Pdv() {
   const categories = useMemo(() => ["Todos", ...new Set(active.map((product) => product.category).filter(Boolean))], [active])
   const byId = (id: string) => known[id] ?? products.find((product) => product.id === id)
 
-  const list = useMemo(() => {
+  // Produtos que batem com a busca (antes do filtro de categoria): base da lista e da contagem em cada categoria.
+  const matching = useMemo(() => {
     const term = remoteOnly ? "" : normalizeText(query)
-    return active.filter(
-      (product) => (category === "Todos" || product.category === category) && normalizeText(`${product.name} ${product.sku} ${product.ean}`).includes(term),
-    )
-  }, [active, category, query, remoteOnly])
+    return active.filter((product) => normalizeText(`${product.name} ${product.sku} ${product.ean}`).includes(term))
+  }, [active, query, remoteOnly])
+  const counts = useMemo(() => {
+    const result: Record<string, number> = { Todos: matching.length }
+    for (const product of matching) result[product.category] = (result[product.category] ?? 0) + 1
+    return result
+  }, [matching])
+  const list = useMemo(() => (category === "Todos" ? matching : matching.filter((product) => product.category === category)), [matching, category])
 
   const total = cart.reduce((sum, line) => sum + lineTotalCents(byId(line.productId)?.priceCents ?? 0, line.quantity), 0)
   const units = roundQty(cart.reduce((sum, line) => sum + line.quantity, 0))
@@ -205,34 +291,19 @@ export default function Pdv() {
   }
   useBarcodeScanner((code) => void onScan(code), { enabled: !paying && !helpOpen })
 
-  const name = session?.user.name ?? "Usuário"
-
   return (
-    <div className="flex h-screen min-w-0 flex-col">
-      <header className="flex h-[84px] shrink-0 items-center justify-between gap-4 border-b border-[var(--color-border)] bg-white px-6 lg:px-10">
-        <div className="flex min-w-0 items-center gap-[18px]">
-          <span className="flex flex-col gap-0.5">
-            <span className={label}>PDV</span>
-            <strong className="whitespace-nowrap text-lg font-bold">{cart.length > 0 ? "Venda em andamento" : "Nenhuma venda aberta"}</strong>
-          </span>
-          <span className="h-[34px] w-px bg-[var(--color-border)]" />
-          <Clock24 />
-        </div>
-        <div className="flex items-center gap-4">
-          <button type="button" aria-label="Notificações" className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[var(--color-slate)] hover:bg-[var(--color-nav)]">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-alert)]" />
-          </button>
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-green-100)] text-base font-bold text-[var(--color-amber)]" title={`${name} · ${activeStore.role}`}>
-            {name.trim()[0]?.toUpperCase() ?? "U"}
-          </span>
-        </div>
-      </header>
-
+    <div className="flex h-dvh min-w-0 flex-col">
       <div className="flex min-h-0 flex-1">
         <section className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-col gap-4 border-b border-[var(--color-border)] bg-[var(--color-paper)] px-6 pb-[18px] pt-6 lg:px-10">
-            <div className="relative">
+          {/* Barra única do PDV: busca, modo de exibição, ajuda e relógio na mesma linha; categorias rolando na horizontal logo abaixo. */}
+          <div className="flex flex-col gap-3 border-b border-[var(--color-border)] bg-[var(--color-paper)] px-4 pb-3 pt-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2.5">
+              {outlet?.openSidebar && (
+                <button type="button" aria-label="Abrir menu" onClick={outlet.openSidebar} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white lg:hidden">
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
+            <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
               <input
                 ref={searchRef}
@@ -244,37 +315,8 @@ export default function Pdv() {
                 className="h-12 w-full rounded-xl bg-[var(--color-nav)] pl-11 pr-14 text-sm font-medium outline-none placeholder:text-[var(--color-slate)] focus-visible:ring-2 focus-visible:ring-[var(--color-green-500)]/35"
               />
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-0.5 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-slate)]">F2</kbd>
-              {scanned && (
-                <p
-                  key={scanned.at}
-                  role="status"
-                  className={`search-item-enter absolute right-14 top-1/2 flex max-w-[60%] -translate-y-1/2 items-center gap-2 truncate rounded-lg px-3 py-1.5 text-[13px] font-bold ${
-                    scanned.ok ? "bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]" : "bg-[var(--color-alert-soft)] text-[var(--color-alert-dark)]"
-                  }`}
-                >
-                  <ScanBarcode className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{scanned.text}</span>
-                </p>
-              )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex min-w-0 flex-1 flex-wrap gap-2.5">
-                {categories.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setCategory(item)}
-                    className={`min-h-11 rounded-full border px-5 text-[15px] font-bold transition ${
-                      category === item
-                        ? "border-[var(--color-amber)] bg-[var(--color-amber)] text-white"
-                        : "border-[var(--color-border)] bg-white hover:border-[var(--color-green-500)]/50"
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-paper-dim)] p-1">
+              <div className="hidden shrink-0 gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-paper-dim)] p-1 sm:flex">
                 {([
                   ["blocos", LayoutGrid, "Blocos"],
                   ["lista", List, "Lista"],
@@ -283,18 +325,50 @@ export default function Pdv() {
                     key={id}
                     type="button"
                     aria-pressed={mode === id}
+                    aria-label={`Ver em ${text.toLowerCase()}`}
+                    title={text}
                     onClick={() => setMode(id)}
-                    className={`flex min-h-10 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold ${mode === id ? "bg-white shadow-xs" : "text-[var(--color-slate)]"}`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${mode === id ? "bg-white text-[var(--color-amber)] shadow-xs" : "text-[var(--color-slate)] hover:text-[var(--color-ink)]"}`}
                   >
-                    <Icon className={`h-[17px] w-[17px] ${mode === id ? "text-[var(--color-amber)]" : ""}`} />
-                    {text}
+                    <Icon className="h-[18px] w-[18px]" />
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                aria-label="Ajuda do PDV"
+                title="Ajuda do PDV"
+                onClick={() => setHelpOpen(true)}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white text-[var(--color-slate)] transition hover:text-[var(--color-ink)]"
+              >
+                <CircleHelp className="h-5 w-5" />
+              </button>
+              <span className="hidden shrink-0 pl-1 lg:block">
+                <Clock24 />
+              </span>
             </div>
+
+            <CategoryScroller items={categories} counts={counts} active={category} onSelect={setCategory} />
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-7 pt-5 lg:px-10">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 md:pb-6 lg:px-8">
+            {/* Retorno do leitor: flutua no topo da lista (sem ocupar espaço nem cobrir a busca). */}
+            <div className="pointer-events-none sticky top-0 z-10 -mb-11 flex h-11 justify-center">
+              {scanned && (
+                <p
+                  key={scanned.at}
+                  role="status"
+                  className={`search-item-enter flex max-w-full items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold shadow-[0_10px_30px_rgba(13,28,46,0.14)] ${
+                    scanned.ok
+                      ? "border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]"
+                      : "border-[var(--color-alert)]/20 bg-[var(--color-alert-soft)] text-[var(--color-alert-dark)]"
+                  }`}
+                >
+                  <ScanBarcode className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{scanned.text}</span>
+                </p>
+              )}
+            </div>
             {!cashOpen && !cash.isLoading && (
               <p role="alert" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-[var(--color-warn-soft)] px-4 py-3 text-sm font-medium text-[var(--color-warn)]">
                 Caixa fechado: abra o caixa para registrar vendas.
@@ -356,6 +430,7 @@ export default function Pdv() {
                       type="button"
                       disabled={out}
                       onClick={() => add(product)}
+                      data-product-card
                       className={`flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white text-left shadow-sm transition hover:border-[var(--color-green-500)]/50 ${out ? "cursor-not-allowed opacity-50" : ""}`}
                     >
                       <span className="relative flex h-[104px] items-center justify-center overflow-hidden bg-[var(--color-paper-dim)] text-[var(--color-slate)]">
@@ -381,20 +456,27 @@ export default function Pdv() {
           </div>
         </section>
 
-        <aside className="hidden w-[360px] shrink-0 flex-col border-l border-[var(--color-border)] bg-white md:flex">
-          <header className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-6 pb-4 pt-6">
-            <span className="flex flex-col gap-0.5">
-              <h2 className="text-[26px] font-bold leading-tight">Carrinho</h2>
+        <aside
+          className={`${cartOpen ? "fixed inset-0 z-50 flex" : "hidden"} w-full shrink-0 flex-col border-l border-[var(--color-border)] bg-white md:static md:z-auto md:flex md:w-[340px] xl:w-[380px]`}
+        >
+          <header className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
+            <span className="flex items-baseline gap-2.5">
+              <h2 className="text-xl font-bold leading-tight">Carrinho</h2>
               <span className={label}>
                 {formatQuantity(units)} {units === 1 ? "item" : "itens"}
               </span>
             </span>
-            {cart.length > 0 && (
-              <Button variant="ghost" onClick={() => setCart([])}>
-                <Trash2 className="h-4 w-4" />
-                Limpar
-              </Button>
-            )}
+            <span className="flex items-center gap-1">
+              {cart.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setCart([])}>
+                  <Trash2 className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
+              <button type="button" aria-label="Fechar carrinho" onClick={() => setCartOpen(false)} className="rounded-lg p-2 text-[var(--color-slate)] hover:bg-[var(--color-paper)] md:hidden">
+                <X className="h-5 w-5" />
+              </button>
+            </span>
           </header>
 
           <div className="flex min-h-40 flex-1 flex-col gap-2.5 overflow-y-auto px-5 py-4">
@@ -437,11 +519,7 @@ export default function Pdv() {
             )}
           </div>
 
-          <div className="border-t border-[var(--color-border)] px-6 pb-24 pt-[18px]">
-            <div className={`mb-2.5 flex justify-between ${label}`}>
-              <span>Subtotal</span>
-              <span>{formatBRL(total)}</span>
-            </div>
+          <div className="border-t border-[var(--color-border)] px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
             <div className="mb-4 flex items-baseline justify-between">
               <span className={`${label} text-[var(--color-ink)]`}>Total</span>
               <strong className="text-[38px] font-extrabold tracking-[-0.03em] text-[var(--color-amber)]">{formatBRL(total)}</strong>
@@ -450,9 +528,9 @@ export default function Pdv() {
               <Check className="h-4 w-4" />
               Cobrar
             </Button>
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[var(--color-border)] pt-3.5">
+            <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
               {STATUS.map((item) => (
-                <span key={item} className="flex items-center gap-[7px] whitespace-nowrap text-[13px] text-[var(--color-slate)]">
+                <span key={item} className="flex items-center gap-[7px] whitespace-nowrap text-[12px] text-[var(--color-slate)]">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-amber)]" />
                   {item}
                 </span>
@@ -462,15 +540,21 @@ export default function Pdv() {
         </aside>
       </div>
 
-      <button
-        type="button"
-        aria-label="Ajuda do PDV"
-        title="Ajuda do PDV"
-        onClick={() => setHelpOpen(true)}
-        className="fixed bottom-[26px] right-[26px] z-40 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-amber)] text-[30px] font-extrabold leading-none text-white shadow-[0_12px_28px_rgba(0,0,0,0.26)]"
-      >
-        ?
-      </button>
+      {/* Celular/tablet: o carrinho vira uma barra fixa com o total; tocar abre o carrinho em tela cheia. */}
+      {!cartOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-[var(--color-border)] bg-white px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(13,28,46,0.08)] md:hidden">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className={label}>
+              {formatQuantity(units)} {units === 1 ? "item" : "itens"}
+            </span>
+            <strong className="text-2xl font-extrabold tracking-[-0.02em] text-[var(--color-amber)]">{formatBRL(total)}</strong>
+          </span>
+          <Button variant="accent" size="lg" className="uppercase tracking-[0.08em]" disabled={cart.length === 0} onClick={() => setCartOpen(true)}>
+            <ShoppingCart className="h-4 w-4" />
+            Ver carrinho
+          </Button>
+        </div>
+      )}
 
       <PdvHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       {paying && (
@@ -480,6 +564,7 @@ export default function Pdv() {
           onClose={() => setPaying(false)}
           onFinish={() => {
             setPaying(false)
+            setCartOpen(false)
             setCart([])
           }}
         />
