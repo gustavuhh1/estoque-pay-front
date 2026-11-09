@@ -43,9 +43,9 @@ function StoreSettings({ store }: { store: Store }) {
 
   return (
     <>
-      <PageHeader title="Ajustes do Sistema" description="Gestão, segurança e auditoria da loja ativa." />
+      <PageHeader title="Ajustes" description="Loja, equipe, fiscal e assinatura" />
 
-      <div role="tablist" aria-label="Seções de ajustes" className="no-scrollbar -mx-4 mb-6 mt-6 flex gap-x-1 overflow-x-auto border-b border-[var(--color-border)] px-4 sm:mx-0 sm:mb-8 sm:mt-8 sm:gap-x-2 sm:px-0">
+      <div role="tablist" aria-label="Seções de ajustes" className="no-scrollbar -mx-4 mb-6 mt-4 flex gap-x-1 overflow-x-auto border-b border-[var(--color-border)] px-4 sm:mx-0 sm:gap-x-2 sm:px-0">
         {tabs.map(({ id, label, icon: Icon }) => {
           const active = tab === id
           return (
