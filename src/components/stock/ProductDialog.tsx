@@ -5,9 +5,11 @@ import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { MoneyInput } from "@/components/ui/money-input"
 import { Select } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { centsToInput, formatQuantity } from "@/lib/format"
+import { useBusy } from "@/lib/useBusy"
 import { missingFiscal, validateProductForm, type ProductFormErrors, type RawProductForm } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -39,7 +41,7 @@ const toForm = (product: Product | null, firstCategory: string, defaultCfop: str
         minStock: formatQuantity(product.minStock),
         active: product.active,
       }
-    : { name: "", ean: "", unit: "UN", category: firstCategory, cost: "", price: "", ncm: "", cfop: defaultCfop, minStock: "10", active: true }
+    : { name: "", ean: "", unit: "UN", category: firstCategory, cost: "", price: "", ncm: "", cfop: defaultCfop, minStock: "10", stock: "", active: true }
 
 type ProductDialogProps = {
   /** Produto em edição, ou null para cadastrar um novo. */
@@ -59,6 +61,9 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
   const [scannedAt, setScannedAt] = useState<number | null>(null)
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [formError, setFormError] = useState("")
+  const { busy, run } = useBusy()
+  // Na API o produto não precisa de categoria (o vínculo é opcional); no modo demonstração precisa.
+  const categoryRequired = !config.useApi
 
   // Leitor de código de barras: com o diálogo aberto, a leitura vai para o campo EAN, esteja o foco onde estiver.
   useBarcodeScanner(
@@ -85,14 +90,13 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
   const locked = nfceEnabled && missingFiscal({ ncm: form.ncm.replace(/\D/g, ""), cfop: form.cfop })
   const categoryOptions = categories.includes(form.category) || !form.category ? categories : [form.category, ...categories]
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault()
-    const { errors: found, input, fiscalLocked } = validateProductForm(form, products, {
+    const { errors: found, input, fiscalLocked, initialStock } = validateProductForm(form, products, {
       editingId: product?.id,
       sku: product?.sku,
       nfceEnabled,
-      // Na API o produto não precisa de categoria (o vínculo é opcional).
-      categoryOptional: config.useApi,
+      categoryOptional: !categoryRequired,
     })
     setErrors(found)
     if (!input) return
@@ -101,13 +105,17 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
     const becomesActive = Boolean(input.active) && !product?.active
     if (limits.maxProducts !== null && becomesActive && activeCount >= limits.maxProducts)
       return setFormError(`O plano Free permite até ${limits.maxProducts} produtos ativos. Inative um produto ou assine o Premium.`)
-    const result = await (product ? updateProduct(product.id, input) : createProduct({ ...input, stock: 0 }))
-    if (!result.ok) return setFormError(result.error)
-    onSaved(
-      fiscalLocked
-        ? `${result.value.name} foi salvo sem NCM/CFOP e ficou inativo enquanto a NFC-e estiver ligada.`
-        : `${result.value.name} ${product ? "atualizado" : "cadastrado"}.`,
-    )
+    // Um envio por vez: o duplo clique cadastrava o mesmo produto duas vezes.
+    void run(async () => {
+      // O estoque inicial entra no histórico como "Estoque inicial" (a API grava a entrada junto com o produto).
+      const result = await (product ? updateProduct(product.id, input) : createProduct({ ...input, stock: initialStock }))
+      if (!result.ok) return setFormError(result.error)
+      onSaved(
+        fiscalLocked
+          ? `${result.value.name} foi salvo sem NCM/CFOP e ficou inativo enquanto a NFC-e estiver ligada.`
+          : `${result.value.name} ${product ? "atualizado" : "cadastrado"}.`,
+      )
+    })
   }
 
   return (
@@ -115,14 +123,14 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
       open
       onClose={onClose}
       title={product ? "Editar produto" : "Novo produto"}
-      description="Campos fiscais são obrigatórios enquanto a NFC-e estiver ligada."
+      description={nfceEnabled ? "Campos com * são obrigatórios. Com a NFC-e ligada, NCM e CFOP também." : "Campos com * são obrigatórios."}
       widthClass="max-w-[640px]"
     >
       <form onSubmit={submit} noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Field id="name" label="Nome do produto" error={errors.name}>
-              <Input id="name" value={form.name} onChange={set("name")} placeholder="Ex: Café Bourbon Special" autoFocus {...aria("name")} />
+            <Field id="name" label="Nome do produto" error={errors.name} required>
+              <Input id="name" aria-required="true" value={form.name} onChange={set("name")} placeholder="Ex: Café Bourbon Special" autoFocus {...aria("name")} />
             </Field>
           </div>
           <Field id="ean" label="Código de barras (EAN/GTIN)" error={errors.ean} hint={errors.ean ? undefined : "Bipe o produto com o leitor para preencher."}>
@@ -139,8 +147,8 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
               <ScanBarcode className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-slate)]" />
             </div>
           </Field>
-          <Field id="unit" label="Tipo de medida" error={errors.unit}>
-            <Select id="unit" value={form.unit} onChange={set("unit")} {...aria("unit")}>
+          <Field id="unit" label="Tipo de medida" error={errors.unit} required>
+            <Select id="unit" aria-required="true" value={form.unit} onChange={set("unit")} {...aria("unit")}>
               {/* A API só tem unidade e quilo; o litro existe apenas no modo demonstração. */}
               {unitOptions.filter((option) => !config.useApi || option.value !== "LT").map((option) => (
                 <option key={option.value} value={option.value}>
@@ -149,28 +157,49 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
               ))}
             </Select>
           </Field>
-          <Field id="category" label="Categoria" error={errors.category}>
-            <Select id="category" value={form.category} onChange={set("category")} {...aria("category")}>
-              {(categoryOptions.length === 0 || config.useApi) && <option value="">{config.useApi ? "Sem categoria" : "Cadastre uma categoria"}</option>}
-              {categoryOptions.map((category) => (
-                <option key={category}>{category}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field id="minStock" label="Quantidade mínima" error={errors.minStock}>
+          {/* No cadastro a categoria ocupa a linha toda e as duas quantidades ficam lado a lado. */}
+          <div className={product ? "" : "sm:col-span-2"}>
+            <Field id="category" label="Categoria" error={errors.category} required={categoryRequired}>
+              <Select id="category" aria-required={categoryRequired} value={form.category} onChange={set("category")} {...aria("category")}>
+                {(categoryOptions.length === 0 || config.useApi) && <option value="">{config.useApi ? "Sem categoria" : "Cadastre uma categoria"}</option>}
+                {categoryOptions.map((category) => (
+                  <option key={category}>{category}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          {!product && (
+            <Field id="stock" label="Estoque inicial" error={errors.stock} hint={errors.stock ? undefined : "O que já tem na loja. Entra no histórico como “Estoque inicial”."}>
+              <div className="relative">
+                <Input
+                  id="stock"
+                  value={form.stock ?? ""}
+                  onChange={set("stock")}
+                  inputMode={form.unit === "UN" ? "numeric" : "decimal"}
+                  placeholder="0"
+                  className={`${mono} pr-12`}
+                  {...aria("stock")}
+                />
+                <span aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold uppercase text-[var(--color-slate)]">
+                  {form.unit === "UN" ? "un" : form.unit.toLowerCase()}
+                </span>
+              </div>
+            </Field>
+          )}
+          <Field id="minStock" label="Quantidade mínima" error={errors.minStock} hint={errors.minStock ? undefined : "Abaixo disso o produto entra em “para repor”."}>
             <Input id="minStock" value={form.minStock} onChange={set("minStock")} inputMode="decimal" placeholder="10" className={mono} {...aria("minStock")} />
           </Field>
-          <Field id="cost" label="Preço de custo (R$)" error={errors.cost}>
-            <Input id="cost" value={form.cost} onChange={set("cost")} inputMode="decimal" placeholder="0,00" className={mono} {...aria("cost")} />
+          <Field id="cost" label="Preço de custo" error={errors.cost}>
+            <MoneyInput id="cost" value={form.cost} onValueChange={(value) => set("cost")({ target: { value } })} placeholder="0,00" {...aria("cost")} />
           </Field>
-          <Field id="price" label="Preço de venda (R$)" error={errors.price} hint="A trava anti-prejuízo bloqueia venda abaixo do custo.">
-            <Input id="price" value={form.price} onChange={set("price")} inputMode="decimal" placeholder="0,00" className={mono} {...aria("price")} />
+          <Field id="price" label="Preço de venda" error={errors.price} hint="A trava anti-prejuízo bloqueia venda abaixo do custo." required>
+            <MoneyInput id="price" aria-required="true" value={form.price} onValueChange={(value) => set("price")({ target: { value } })} placeholder="0,00" {...aria("price")} />
           </Field>
-          <Field id="ncm" label={nfceEnabled ? "NCM *" : "NCM"} error={errors.ncm}>
-            <Input id="ncm" value={form.ncm} onChange={set("ncm")} inputMode="numeric" placeholder="0901.21.00" className={mono} {...aria("ncm")} />
+          <Field id="ncm" label="NCM" error={errors.ncm} required={nfceEnabled}>
+            <Input id="ncm" aria-required={nfceEnabled} value={form.ncm} onChange={set("ncm")} inputMode="numeric" placeholder="0901.21.00" className={mono} {...aria("ncm")} />
           </Field>
-          <Field id="cfop" label={nfceEnabled ? "CFOP *" : "CFOP"} error={errors.cfop} hint="5102 para venda dentro do estado.">
-            <Input id="cfop" value={form.cfop} onChange={set("cfop")} inputMode="numeric" placeholder="5102" className={mono} {...aria("cfop")} />
+          <Field id="cfop" label="CFOP" error={errors.cfop} hint="5102 para venda dentro do estado." required={nfceEnabled}>
+            <Input id="cfop" aria-required={nfceEnabled} value={form.cfop} onChange={set("cfop")} inputMode="numeric" placeholder="5102" className={mono} {...aria("cfop")} />
           </Field>
           <div className="sm:col-span-2">
             <Switch
@@ -193,9 +222,9 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" variant="accent">
+          <Button type="submit" variant="accent" disabled={busy}>
             <Save className="h-4 w-4" />
-            Salvar produto
+            {busy ? "Salvando…" : "Salvar produto"}
           </Button>
         </div>
       </form>

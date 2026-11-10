@@ -8,7 +8,7 @@ import PdvReceipt from "@/components/pdv/PdvReceipt"
 import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { MoneyInput } from "@/components/ui/money-input"
 import { errorMessage } from "@/lib/api"
 import { formatBRL, formatReceiptNumber, parseMoneyToCents } from "@/lib/format"
 import { cents } from "@/lib/money"
@@ -361,16 +361,15 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
         {method === "dinheiro" && (
           <div className="grid grid-cols-2 items-end gap-4">
             <Field id="pdv-received" label="Valor recebido">
-              <Input
+              <MoneyInput
                 id="pdv-received"
                 value={received}
-                onChange={(event) => {
-                  setReceived(event.target.value)
+                onValueChange={(value) => {
+                  setReceived(value)
                   setError("")
                 }}
                 placeholder="0,00"
-                inputMode="decimal"
-                className="h-12 font-[family-name:var(--font-mono)] text-base"
+                className="h-12 text-base"
               />
             </Field>
             <div className="rounded-xl border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] px-4 py-3 text-[var(--color-amber-dark)]">

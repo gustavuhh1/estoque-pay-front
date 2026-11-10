@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useInventory } from "@/inventory/useInventory"
+import { useBusy } from "@/lib/useBusy"
 
 /** Cadastro de categorias da loja. Excluir uma categoria nunca apaga os produtos dela. */
 export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
@@ -13,41 +14,49 @@ export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
   const [editing, setEditing] = useState<{ from: string; to: string } | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null)
+  // Uma ação por vez (adicionar, renomear ou excluir): o duplo clique não manda a mesma requisição duas vezes.
+  const { busy, run } = useBusy()
 
   const countOf = (category: string) => products.filter((product) => product.category === category).length
 
-  async function add(event: FormEvent) {
+  function add(event: FormEvent) {
     event.preventDefault()
-    const result = await addCategory(name)
-    if (!result.ok) return setMessage({ tone: "error", text: result.error })
-    setName("")
-    setMessage(null)
-  }
-
-  async function saveRename() {
-    if (!editing) return
-    const result = await renameCategory(editing.from, editing.to)
-    if (!result.ok) return setMessage({ tone: "error", text: result.error })
-    setEditing(null)
-    setMessage(null)
-  }
-
-  async function confirmRemove() {
-    if (!removing) return
-    const result = await removeCategory(removing)
-    if (!result.ok) return setMessage({ tone: "error", text: result.error })
-    setMessage({
-      tone: "info",
-      text: result.value > 0 ? `${result.value} produto(s) foram para "Sem categoria". Nenhum produto foi apagado.` : "Categoria excluída.",
+    void run(async () => {
+      const result = await addCategory(name)
+      if (!result.ok) return setMessage({ tone: "error", text: result.error })
+      setName("")
+      setMessage(null)
     })
-    setRemoving(null)
+  }
+
+  function saveRename() {
+    if (!editing) return
+    void run(async () => {
+      const result = await renameCategory(editing.from, editing.to)
+      if (!result.ok) return setMessage({ tone: "error", text: result.error })
+      setEditing(null)
+      setMessage(null)
+    })
+  }
+
+  function confirmRemove() {
+    if (!removing) return
+    void run(async () => {
+      const result = await removeCategory(removing)
+      if (!result.ok) return setMessage({ tone: "error", text: result.error })
+      setMessage({
+        tone: "info",
+        text: result.value > 0 ? `${result.value} produto(s) foram para "Sem categoria". Nenhum produto foi apagado.` : "Categoria excluída.",
+      })
+      setRemoving(null)
+    })
   }
 
   return (
     <Dialog open onClose={onClose} title="Gerenciar categorias" description="Organize o estoque por categoria. Excluir uma categoria não apaga os produtos." widthClass="max-w-[520px]">
       <form onSubmit={add} className="flex gap-3">
         <Input aria-label="Nova categoria" value={name} onChange={(event) => setName(event.target.value)} placeholder="Nome da nova categoria" maxLength={40} />
-        <Button type="submit" variant="accent">
+        <Button type="submit" variant="accent" disabled={busy}>
           <Plus className="h-4 w-4" />
           Adicionar
         </Button>
@@ -74,12 +83,12 @@ export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
                   aria-label={`Novo nome de ${category}`}
                   value={editing.to}
                   onChange={(event) => setEditing({ from: category, to: event.target.value })}
-                  onKeyDown={(event) => event.key === "Enter" && void saveRename()}
+                  onKeyDown={(event) => event.key === "Enter" && saveRename()}
                   maxLength={40}
                   autoFocus
                   className="h-9"
                 />
-                <button type="button" aria-label="Salvar nome" onClick={saveRename} className="rounded-lg p-2 text-[var(--color-amber)] hover:bg-[var(--color-stock-green-soft)]">
+                <button type="button" aria-label="Salvar nome" onClick={saveRename} disabled={busy} className="rounded-lg p-2 text-[var(--color-amber)] hover:bg-[var(--color-stock-green-soft)] disabled:opacity-40">
                   <Check className="h-4 w-4" />
                 </button>
                 <button type="button" aria-label="Cancelar edição" onClick={() => setEditing(null)} className="rounded-lg p-2 text-[var(--color-slate)] hover:bg-[var(--color-paper)]">
@@ -94,7 +103,7 @@ export default function CategoriesDialog({ onClose }: { onClose: () => void }) {
                 <Button size="sm" variant="outline" onClick={() => setRemoving(null)}>
                   Manter
                 </Button>
-                <Button size="sm" onClick={confirmRemove}>
+                <Button size="sm" onClick={confirmRemove} disabled={busy}>
                   Excluir
                 </Button>
               </>

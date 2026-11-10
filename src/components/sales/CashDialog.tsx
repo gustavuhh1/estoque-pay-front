@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react"
 import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { MoneyInput } from "@/components/ui/money-input"
 import type { Shift, ShiftTotals } from "@/caixa/caixa"
 import { formatBRL, formatDateTime, parseMoneyToCents } from "@/lib/format"
 
@@ -33,8 +33,8 @@ export default function CashDialog(props: CashDialogProps) {
     return (
       <Dialog open onClose={props.onClose} title="Abrir caixa" description="Informe o fundo de troco que está na gaveta para começar o turno." widthClass="max-w-[460px]">
         <form onSubmit={submit} noValidate className="space-y-4">
-          <Field id="cash-opening" label="Fundo de troco (R$)" error={error || undefined}>
-            <Input id="cash-opening" value={value} onChange={(event) => { setValue(event.target.value); setError("") }} inputMode="decimal" className="font-[family-name:var(--font-mono)]" autoFocus />
+          <Field id="cash-opening" label="Fundo de troco" error={error || undefined}>
+            <MoneyInput id="cash-opening" value={value} onValueChange={(next) => { setValue(next); setError("") }} placeholder="0,00" autoFocus />
           </Field>
           <div className="flex flex-col-reverse gap-3 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={props.onClose}>
@@ -78,8 +78,8 @@ export default function CashDialog(props: CashDialogProps) {
         </dl>
 
         <div className="mt-5 grid items-end gap-4 sm:grid-cols-2">
-          <Field id="cash-counted" label="Dinheiro contado (R$)" error={error || undefined} hint={`Esperado na gaveta: ${formatBRL(expected)}`}>
-            <Input id="cash-counted" value={value} onChange={(event) => { setValue(event.target.value); setError("") }} inputMode="decimal" placeholder="0,00" className="font-[family-name:var(--font-mono)]" autoFocus />
+          <Field id="cash-counted" label="Dinheiro contado" error={error || undefined} hint={`Esperado na gaveta: ${formatBRL(expected)}`}>
+            <MoneyInput id="cash-counted" value={value} onValueChange={(next) => { setValue(next); setError("") }} placeholder="0,00" autoFocus />
           </Field>
           <div
             className={`rounded-xl border px-4 py-3 ${
