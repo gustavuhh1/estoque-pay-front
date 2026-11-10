@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Toast, type ToastTone } from "@/components/ui/toast"
 import { formatBRL, formatDateTime, formatQuantity, normalizeText } from "@/lib/format"
+import { useBusy } from "@/lib/useBusy"
 import { missingFiscal, stockStatus } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -155,15 +156,18 @@ export default function Stock() {
     onRemove: () => setRemoving(product),
   })
 
-  async function confirmRemove() {
+  const { busy: removingBusy, run: runRemove } = useBusy()
+  function confirmRemove() {
     if (!removing) return
-    const result = await setProductActive(removing.id, false)
-    setToast(
-      result.ok
-        ? { title: "Produto excluído", message: `${removing.name} foi inativado e mantido no histórico.`, tone: "info" }
-        : { title: "Não foi possível excluir", message: result.error, tone: "error" },
-    )
-    setRemoving(null)
+    void runRemove(async () => {
+      const result = await setProductActive(removing.id, false)
+      setToast(
+        result.ok
+          ? { title: "Produto excluído", message: `${removing.name} foi inativado e mantido no histórico.`, tone: "info" }
+          : { title: "Não foi possível excluir", message: result.error, tone: "error" },
+      )
+      setRemoving(null)
+    })
   }
 
   return (
@@ -482,7 +486,9 @@ export default function Stock() {
           <Button variant="outline" onClick={() => setRemoving(null)}>
             Manter produto
           </Button>
-          <Button onClick={confirmRemove}>Excluir produto</Button>
+          <Button onClick={confirmRemove} disabled={removingBusy}>
+            {removingBusy ? "Excluindo…" : "Excluir produto"}
+          </Button>
         </div>
       </Dialog>
 

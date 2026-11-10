@@ -6,6 +6,7 @@ import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { formatQuantity, parseQuantity } from "@/lib/format"
+import { useBusy } from "@/lib/useBusy"
 import { roundQty } from "@/inventory/logic"
 import type { MoveInput } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -34,6 +35,7 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
   const [quantity, setQuantity] = useState("")
   const [reason, setReason] = useState("")
   const [error, setError] = useState("")
+  const { busy, run } = useBusy()
 
   // Leitor de código de barras: bipar a mercadoria escolhe o produto (ex.: entrada de reposição).
   useBarcodeScanner(
@@ -54,20 +56,24 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
       ? roundQty(type === "entrada" ? product.stock + parsed : type === "saida" ? product.stock - parsed : parsed)
       : null
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault()
     if (parsed === null) return setError("Informe uma quantidade válida (0 ou mais, até 3 casas decimais).")
-    const result = await moveStock({ productId, type, quantity: parsed, reason })
-    if (!result.ok) return setError(result.error)
-    onDone(`${result.value.productName}: saldo ${formatQuantity(result.value.balance)}`)
+    // Um envio por vez: o duplo clique gravava a mesma movimentação duas vezes no histórico.
+    void run(async () => {
+      const result = await moveStock({ productId, type, quantity: parsed, reason })
+      if (!result.ok) return setError(result.error)
+      onDone(`${result.value.productName}: saldo ${formatQuantity(result.value.balance)}`)
+    })
   }
 
   return (
     <Dialog open onClose={onClose} title="Registrar movimentação" description="Entradas, saídas e ajustes ficam registrados no histórico.">
       <form onSubmit={submit} noValidate className="space-y-4">
-        <Field id="mv-product" label="Produto" hint="Ou bipe o produto com o leitor.">
+        <Field id="mv-product" label="Produto" hint="Ou bipe o produto com o leitor." required>
           <Select
             id="mv-product"
+            aria-required="true"
             value={productId}
             onChange={(e) => {
               setProductId(e.target.value)
@@ -83,9 +89,10 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="mv-type" label="Tipo de movimentação">
+          <Field id="mv-type" label="Tipo de movimentação" required>
             <Select
               id="mv-type"
+              aria-required="true"
               value={type}
               onChange={(e) => {
                 setType(e.target.value as MoveInput["type"])
@@ -97,9 +104,10 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
               <option value="ajuste">Ajuste de contagem</option>
             </Select>
           </Field>
-          <Field id="mv-quantity" label={typeHelp[type].quantity}>
+          <Field id="mv-quantity" label={typeHelp[type].quantity} required>
             <Input
               id="mv-quantity"
+              aria-required="true"
               value={quantity}
               onChange={(e) => {
                 setQuantity(e.target.value)
@@ -139,8 +147,8 @@ export default function MovementDialog({ initialProductId, initialType = "entrad
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" variant="accent">
-            Registrar movimentação
+          <Button type="submit" variant="accent" disabled={busy}>
+            {busy ? "Registrando…" : "Registrar movimentação"}
           </Button>
         </div>
       </form>
