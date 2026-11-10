@@ -59,6 +59,8 @@ export type RawProductForm = {
   ncm: string
   cfop: string
   minStock: string
+  /** Estoque inicial: só existe no cadastro (na edição o saldo muda por movimentação). */
+  stock?: string
   active: boolean
 }
 export type ProductFormErrors = Partial<Record<Exclude<keyof RawProductForm, "active">, string>>
@@ -87,7 +89,7 @@ export function validateProductForm(
   raw: RawProductForm,
   products: Product[],
   options: { editingId?: string; sku?: string; nfceEnabled: boolean; categoryOptional?: boolean },
-): { errors: ProductFormErrors; input: Omit<ProductInput, "stock"> | null; fiscalLocked: boolean } {
+): { errors: ProductFormErrors; input: Omit<ProductInput, "stock"> | null; fiscalLocked: boolean; initialStock: number } {
   const errors: ProductFormErrors = {}
 
   const name = raw.name.trim()
@@ -126,12 +128,20 @@ export function validateProductForm(
   const minStock = UNITS.includes(unit) && isFractionalUnit(unit) ? parseQuantity(minRaw) : parseWholeNumber(minRaw)
   if (minStock === null || minStock > MAX_UNITS) errors.minStock = "Informe uma quantidade mínima válida (0 ou mais)."
 
-  if (Object.keys(errors).length > 0) return { errors, input: null, fiscalLocked: false }
+  // Mesma regra da quantidade mínima: inteiro por unidade, até 3 casas no fracionado; em branco é 0.
+  const stockRaw = raw.stock?.trim() ? raw.stock : "0"
+  const fractional = UNITS.includes(unit) && isFractionalUnit(unit)
+  const initialStock = fractional ? parseQuantity(stockRaw) : parseWholeNumber(stockRaw)
+  if (initialStock === null || initialStock > MAX_UNITS)
+    errors.stock = fractional || parseQuantity(stockRaw) === null ? "Informe um estoque inicial válido (0 ou mais)." : "Produto por unidade aceita só número inteiro."
+
+  if (Object.keys(errors).length > 0) return { errors, input: null, fiscalLocked: false, initialStock: 0 }
 
   const fiscalLocked = options.nfceEnabled && missingFiscal({ ncm, cfop })
   return {
     errors,
     fiscalLocked,
+    initialStock: initialStock!,
     input: {
       name,
       sku: options.sku ?? generateSku(name, products),

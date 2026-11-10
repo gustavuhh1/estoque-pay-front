@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react"
 import Field from "@/components/Field"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { MoneyInput } from "@/components/ui/money-input"
 import { Select } from "@/components/ui/select"
 import { config } from "@/config"
 import { couponDiscountLabel, type Coupon } from "@/customers/coupons"
@@ -80,8 +80,8 @@ export default function CouponDialog({ customers, initialCustomerId, onIssue, on
             </Select>
           </Field>
           {config.useApi ? (
-            <Field id="coupon-value" label="Desconto (R$)" hint="Valor fixo abatido do total da venda. Nunca passa do total.">
-              <Input id="coupon-value" value={value} onChange={(event) => setValue(event.target.value)} inputMode="decimal" placeholder="5,00" />
+            <Field id="coupon-value" label="Desconto" hint="Valor fixo abatido do total da venda. Nunca passa do total.">
+              <MoneyInput id="coupon-value" value={value} onValueChange={setValue} placeholder="5,00" />
             </Field>
           ) : (
             <Field id="coupon-percent" label="Desconto">

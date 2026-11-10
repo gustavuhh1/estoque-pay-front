@@ -59,6 +59,26 @@ export function centsToInput(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",")
 }
 
+/** Centavos no formato do campo em R$: 129050 → "1.290,50" (com separador de milhar). */
+export function formatMoneyInput(cents: number) {
+  const reais = Math.floor(cents / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+  return `${reais},${String(cents % 100).padStart(2, "0")}`
+}
+
+/** Teto do campo em R$ (R$ 999.999.999,99): acima disso um dígito a mais é ignorado. */
+const MAX_INPUT_CENTS = 99_999_999_999
+
+/**
+ * Campo em R$ como nos apps de banco: os dígitos entram pelos centavos.
+ * "1" → "0,01", "129" → "1,29", "1290" → "12,90"; sem dígitos, volta a "" (campo vazio).
+ */
+export function moneyInputFromDigits(typed: string) {
+  const digits = typed.replace(/\D/g, "").replace(/^0+/, "")
+  if (!digits) return ""
+  const cents = Number(digits)
+  return Number.isSafeInteger(cents) && cents <= MAX_INPUT_CENTS ? formatMoneyInput(cents) : null
+}
+
 export function stockValueCents(products: Pick<Product, "costCents" | "stock">[]) {
   return products.reduce((total, product) => total + product.costCents * product.stock, 0)
 }
