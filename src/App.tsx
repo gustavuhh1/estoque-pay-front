@@ -4,6 +4,7 @@ import ProtectedRoute from "@/auth/ProtectedRoute"
 import { StoreProvider } from "@/store/StoreContext"
 import { InventoryProvider } from "@/inventory/InventoryContext"
 import DashboardLayout from "@/components/layout/DashboardLayout"
+import { StoreTransitionProvider } from "@/components/layout/StoreTransition"
 
 import Landing from "@/pages/Landing"
 import Login from "@/pages/Login"
@@ -30,33 +31,35 @@ export default function App() {
       <AuthProvider>
         <StoreProvider>
           <InventoryProvider>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/cadastro" element={<Signup />} />
-              <Route path="/recuperar-senha" element={<ForgotPassword />} />
-              <Route path="/redefinir-senha" element={<ResetPassword />} />
-              <Route path="/termos" element={<Legal type="terms" />} />
-              <Route path="/privacidade" element={<Legal type="privacy" />} />
+            <StoreTransitionProvider>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/cadastro" element={<Signup />} />
+                <Route path="/recuperar-senha" element={<ForgotPassword />} />
+                <Route path="/redefinir-senha" element={<ResetPassword />} />
+                <Route path="/termos" element={<Legal type="terms" />} />
+                <Route path="/privacidade" element={<Legal type="privacy" />} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route path="/lojas" element={<StoreSelection />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route element={<DashboardLayout />}>
-                  <Route path="/painel" element={<Dashboard />} />
-                  <Route path="/pdv" element={<Pdv />} />
-                  <Route path="/vendas" element={<Sales />} />
-                  <Route path="/estoque" element={<Stock />} />
-                  <Route path="/clientes" element={<Customers />} />
-                  <Route path="/ajustes" element={<SettingsPage />} />
-                  <Route path="/perfil" element={<Profile />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/lojas" element={<StoreSelection />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route element={<DashboardLayout />}>
+                    <Route path="/painel" element={<Dashboard />} />
+                    <Route path="/pdv" element={<Pdv />} />
+                    <Route path="/vendas" element={<Sales />} />
+                    <Route path="/estoque" element={<Stock />} />
+                    <Route path="/clientes" element={<Customers />} />
+                    <Route path="/ajustes" element={<SettingsPage />} />
+                    <Route path="/perfil" element={<Profile />} />
+                  </Route>
+                  <Route path="/403" element={<Forbidden />} />
+                  <Route path="/erro-rede" element={<NetworkError />} />
                 </Route>
-                <Route path="/403" element={<Forbidden />} />
-                <Route path="/erro-rede" element={<NetworkError />} />
-              </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </StoreTransitionProvider>
           </InventoryProvider>
         </StoreProvider>
       </AuthProvider>

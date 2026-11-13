@@ -2,14 +2,17 @@ import { ArrowRight, Boxes, Building2, Check, Plus, Store } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { useStoreSwitch } from "@/components/layout/useStoreSwitch"
 import { useStores } from "@/store/useStores"
 
 export default function StoreSelection() {
   const navigate = useNavigate()
-  const { stores, activeStoreId, setActiveStore } = useStores()
+  const { stores, activeStoreId } = useStores()
+  // Já havendo uma loja ativa, escolher outra toca a animação de troca; a tela por trás já vai para o painel.
+  const { switchStore } = useStoreSwitch()
 
   const selectStore = (id: string) => {
-    setActiveStore(id)
+    switchStore(id)
     navigate("/painel")
   }
 
