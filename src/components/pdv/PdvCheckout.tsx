@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { MoneyInput } from "@/components/ui/money-input"
-import { findActiveCoupon, readCoupons, writeCoupons } from "@/customers/coupons"
+import { couponDiscountCents, couponDiscountLabel, findActiveCoupon, isGlobal, readCoupons, writeCoupons, type CouponUse } from "@/customers/coupons"
 import { readCustomers } from "@/customers/customers"
 import { formatBRL, digitsOf, formatReceiptNumber, maskCpf, parseMoneyToCents } from "@/lib/format"
 import type { PaymentMethod, Sale } from "@/inventory/types"
@@ -60,14 +60,19 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
   const couponCode = coupon.trim()
   const found = findActiveCoupon(coupons, couponCode)
   const couponOwner = found ? (customers.find((item) => item.id === found.customerId) ?? null) : null
+  const global = found ? isGlobal(found) : false
   const couponError = !couponCode
     ? ""
     : !found
-      ? "Cupom não encontrado ou já utilizado."
-      : customer && customer.id !== found.customerId
-        ? `Este cupom pertence a ${couponOwner?.name ?? "outro cliente"}.`
-        : ""
-  const discountCents = found && !couponError ? Math.round((totalCents * found.percent) / 100) : 0
+      ? "Cupom não encontrado, já utilizado, expirado ou desativado."
+      : global && !customer
+        ? "Cupom para todos os clientes: informe o CPF de um cliente cadastrado (1 uso por CPF)."
+        : global && customer && found.uses?.some((use) => digitsOf(use.cpf) === digitsOf(customer.cpf))
+          ? `${customer.name} já usou este cupom.`
+          : !global && customer && customer.id !== found.customerId
+            ? `Este cupom pertence a ${couponOwner?.name ?? "outro cliente"}.`
+            : ""
+  const discountCents = found && !couponError ? couponDiscountCents(found, totalCents) : 0
   const payableCents = totalCents - discountCents
 
   const receivedCents = received.trim() ? parseMoneyToCents(received) : null
@@ -93,8 +98,15 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
       couponCode: discountCents > 0 ? found?.code : undefined,
     })
     if (!result.ok) return setError(result.error)
-    if (found && discountCents > 0) {
-      const next = coupons.map((item) => (item.id === found.id ? { ...item, redeemedAt: Date.now(), saleNumber: result.value.number } : item))
+    if (found && discountCents > 0 && buyer) {
+      // Todo uso fica registrado (tela de cupons); só o individual é "baixado".
+      const usedAt = result.value.createdAt
+      const use: CouponUse = { id: `use-${usedAt.toString(36)}`, customerId: buyer.id, customerName: buyer.name, cpf: buyer.cpf, discountCents, usedAt, saleNumber: result.value.number }
+      const next = readCoupons(activeStore.id).map((item) =>
+        item.id === found.id
+          ? { ...item, uses: [...(item.uses ?? []), use], ...(global ? {} : { redeemedAt: usedAt, saleNumber: result.value.number }) }
+          : item,
+      )
       if (writeCoupons(activeStore.id, next)) setCoupons(next)
     }
     setError("")
@@ -270,7 +282,7 @@ export default function PdvCheckout({ cart, totalCents, onClose, onFinish }: Pdv
           id="pdv-coupon"
           label="Cupom de desconto (opcional)"
           error={couponError || undefined}
-          hint={found && !couponError ? `Cupom ${found.code}: ${found.percent}% de desconto (−${formatBRL(discountCents)}).` : undefined}
+          hint={found && !couponError ? `Cupom ${found.code}: ${couponDiscountLabel(found)} de desconto (−${formatBRL(discountCents)}).` : undefined}
         >
           <Input
             id="pdv-coupon"

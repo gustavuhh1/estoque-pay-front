@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { isActive, type Coupon } from "@/customers/coupons"
+import { couponDiscountCents, couponStatus, isGlobal, type Coupon } from "@/customers/coupons"
 import type { Customer } from "@/customers/customers"
 import { listCouponsApi, searchCustomers } from "@/customers/customersApi"
 import { digitsOf, maskCpf } from "@/lib/format"
@@ -52,16 +52,21 @@ export function useBuyer(totalCents: number) {
 
   const code = coupon.trim().toUpperCase()
   const known = code && coupons ? coupons.find((item) => item.code === code) : undefined
+  const status = known ? couponStatus(known) : null
   const couponError = !code
     ? ""
     : coupons && !known
       ? "Cupom não encontrado nesta loja."
-      : known && !isActive(known)
-        ? "Este cupom já foi usado ou expirou."
-        : known?.customerId && customer && customer.id !== known.customerId
-          ? "Este cupom pertence a outro cliente."
-          : ""
-  const discountCents = known && !couponError ? Math.min(known.valueCents ?? 0, totalCents) : 0
+      : status === "desativado"
+        ? "Este cupom foi desativado pela loja."
+        : status === "usado" || status === "expirado"
+          ? "Este cupom já foi usado ou expirou."
+          : known?.customerId && customer && customer.id !== known.customerId
+            ? "Este cupom pertence a outro cliente."
+            : ""
+  // Cupom global vale uma vez por CPF: sem o cliente identificado o servidor recusa, então avisa antes.
+  const needsCustomer = Boolean(known && isGlobal(known) && !couponError && !customer)
+  const discountCents = known && !couponError && !needsCustomer ? couponDiscountCents(known, totalCents) : 0
 
   return {
     cpf,
@@ -69,10 +74,10 @@ export function useBuyer(totalCents: number) {
     match,
     isUnknownCpf,
     coupon,
-    couponError,
+    couponError: couponError || (needsCustomer ? "Cupom para todos os clientes: informe o CPF do cliente acima para usar (1 vez por CPF)." : ""),
     discountCents,
     /** Código do cupom reconhecido e válido (vazio enquanto não houver prévia). */
-    appliedCode: known && !couponError ? known.code : "",
+    appliedCode: known && !couponError && !needsCustomer ? known.code : "",
     setCpf: (value: string) => {
       setCpfText(maskCpf(value))
       if (customer) setCustomer(null)

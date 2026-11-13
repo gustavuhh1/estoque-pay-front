@@ -1,4 +1,4 @@
-import { Boxes, ChevronsLeft, ChevronsRight, LayoutDashboard, LogOut, Receipt, Settings, ShoppingCart, Users, X } from "lucide-react"
+import { Boxes, ChevronsLeft, ChevronsRight, LayoutDashboard, LogOut, Receipt, Settings, ShoppingCart, Ticket, Users, X } from "lucide-react"
 import { NavLink, Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/auth/useAuth"
@@ -12,6 +12,7 @@ const navigation = [
   { label: "PDV", icon: ShoppingCart, to: "/pdv" },
   { label: "Estoque", icon: Boxes, to: "/estoque" },
   { label: "Clientes", icon: Users, to: "/clientes" },
+  { label: "Cupons", icon: Ticket, to: "/cupons" },
   { label: "Vendas", icon: Receipt, to: "/vendas" },
   { label: "Ajustes", icon: Settings, to: "/ajustes" },
 ]
