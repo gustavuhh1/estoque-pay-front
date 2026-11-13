@@ -20,9 +20,11 @@ import { api, errorMessage } from "@/lib/api"
 import { rangeBounds, rangeLabel, type DateRange } from "@/lib/dateRange"
 import { downloadCsv } from "@/lib/download"
 import { vendaToSale, type ApiVenda } from "@/pdv/pdvApi"
-import { formatBRL, formatDateTime, normalizeText, saleLabel } from "@/lib/format"
+import { digitsOf, formatBRL, formatDateTime, normalizeText, saleLabel } from "@/lib/format"
 import { PAYMENT_LABELS, type Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import type { Customer } from "@/customers/customers"
+import { useCustomers } from "@/customers/useCustomers"
 import { useStores } from "@/store/useStores"
 
 const FILTERS = ["Todas", "Pagas", "Pendentes", "Canceladas"] as const
@@ -81,6 +83,19 @@ function useSalesInRange(range: DateRange | null, sales: Sale[]) {
   }, [key, range, remote, sales, useServer])
 }
 
+/** Completa nome e CPF das vendas que têm cliente cadastrado (a API manda só o `cliente_id`). */
+function withCustomers(sales: Sale[], customers: Customer[]) {
+  if (customers.length === 0) return sales
+  const byId = new Map(customers.map((customer) => [customer.id, customer]))
+  return sales.map((sale) => {
+    const customer = sale.customerId && !sale.customerName ? byId.get(sale.customerId) : undefined
+    return customer ? { ...sale, customerName: customer.name, cpf: digitsOf(customer.cpf) } : sale
+  })
+}
+
+/** Quem comprou: o cliente cadastrado ou, sem ele, o aviso de que a venda não tem cliente. */
+const buyerLabel = (sale: Sale) => sale.customerName ?? (sale.customerId ? "Cliente cadastrado" : "Sem cliente cadastrado")
+
 function StatusPill({ sale }: { sale: Sale }) {
   if (sale.status === "concluida")
     return <span className={`${pill} border border-[var(--color-green-100)] bg-[var(--color-stock-green-soft)] text-[var(--color-amber-dark)]`}>Pago</span>
@@ -119,7 +134,10 @@ function SaleActions({ sale, canManage, onNote, onCancel }: SaleActionsProps) {
 
 export default function Sales() {
   const { activeStore } = useStores()
-  const { sales, cancelSale } = useInventory()
+  const { sales: rawSales, cancelSale } = useInventory()
+  // Com a API a venda só traz o id do cliente: o nome e o CPF vêm do cadastro de clientes da loja.
+  const { customers } = useCustomers(activeStore.id)
+  const sales = useMemo(() => withCustomers(rawSales, customers), [rawSales, customers])
   // Cancelar venda é ação de Owner e Gestor. Abrir e fechar o caixa vale para qualquer cargo (API #54).
   const canManage = activeStore.role !== "Colaborador"
 
@@ -142,10 +160,10 @@ export default function Sales() {
   // Vendas que batem com a busca (antes da situação): base da lista e da contagem em cada situação.
   const matching = useMemo(() => {
     const term = normalizeText(query).replace(/^#/, "")
-    return [...inRange.list]
+    return [...withCustomers(inRange.list, customers)]
       .sort((a, b) => b.createdAt - a.createdAt)
       .filter((sale) => !term || normalizeText(`${saleLabel(sale)} ${sale.customerName ?? ""} ${sale.items.map((item) => item.name).join(" ")}`).includes(term))
-  }, [inRange.list, query])
+  }, [customers, inRange.list, query])
   // Resumo do período escolhido: só as vendas pagas entram no faturamento.
   const rangePaid = useMemo(() => matching.filter((sale) => sale.status === "concluida"), [matching])
   const counts = useMemo(() => {
@@ -193,7 +211,7 @@ export default function Sales() {
         saleLabel(sale),
         formatDateTime(sale.createdAt),
         sale.operator ?? "",
-        sale.customerName ?? "Consumidor não identificado",
+        buyerLabel(sale),
         sale.cpf ?? "",
         sale.items.length,
         PAYMENT_LABELS[sale.payment],
@@ -336,7 +354,7 @@ export default function Sales() {
                       <p className="mt-0.5 truncate text-xs text-[var(--color-slate)]">
                         {timeFormatter.format(sale.createdAt)} · {PAYMENT_LABELS[sale.payment]} · {sale.items.length} {sale.items.length === 1 ? "item" : "itens"}
                       </p>
-                      <p className="truncate text-xs text-[var(--color-slate)]">{sale.customerName ?? sale.operator ?? "Consumidor não identificado"}</p>
+                      <p className="truncate text-xs text-[var(--color-slate)]">{buyerLabel(sale)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-0.5">
                       <strong className={`pr-2 text-base font-extrabold tabular-nums ${done ? "" : "text-[var(--color-slate)] line-through"}`}>{formatBRL(sale.totalCents)}</strong>
@@ -381,10 +399,10 @@ export default function Sales() {
                           <p className="font-[family-name:var(--font-mono)] font-bold">{saleLabel(sale)}</p>
                           <p className="max-w-[180px] truncate text-[13px] xl:max-w-[220px] text-[#94a3b8]">
                             {timeFormatter.format(sale.createdAt)} · {sale.operator ?? "—"}
-                            <span className="xl:hidden"> · {sale.customerName ?? "Consumidor não identificado"}</span>
+                            <span className="xl:hidden"> · {buyerLabel(sale)}</span>
                           </p>
                         </TableCell>
-                        <TableCell className="hidden max-w-[220px] truncate py-2.5 xl:table-cell">{sale.customerName ?? "Consumidor não identificado"}</TableCell>
+                        <TableCell className="hidden max-w-[220px] truncate py-2.5 xl:table-cell">{buyerLabel(sale)}</TableCell>
                         <TableCell className="py-2.5 text-center">
                           <span className={`${pill} bg-[var(--color-paper-dim)] text-[var(--color-slate)]`}>{PAYMENT_LABELS[sale.payment]}</span>
                         </TableCell>
