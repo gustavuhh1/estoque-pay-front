@@ -219,8 +219,8 @@ function movement(product: Product, type: Movement["type"], delta: number, reaso
 export function createProduct(inv: StoreInventory, input: ProductInput, at = Date.now()): Outcome<Product> {
   if (inv.products.some((product) => product.sku === input.sku)) return fail("Já existe um produto com este SKU.")
   if (input.ean && inv.products.some((product) => product.ean === input.ean)) return fail("Este código de barras já está em uso em outro produto.")
-  const { ean = "", unit = "UN", ncm = "", cfop = "", active = true, ...rest } = input
-  const product: Product = { id: uid(), ...rest, ean, unit, ncm, cfop, active, createdAt: at }
+  const { ean = "", unit = "UN", ncm = "", cfop = "", active = true, image, ...rest } = input
+  const product: Product = { id: uid(), ...rest, ean, unit, ncm, cfop, active, ...(image ? { image } : {}), createdAt: at }
   const movements = input.stock > 0 ? [movement(product, "entrada", input.stock, "Estoque inicial", at), ...inv.movements] : inv.movements
   return { ok: true, inventory: { ...inv, products: [...inv.products, product], movements }, value: product }
 }
@@ -231,10 +231,14 @@ export function updateProduct(inv: StoreInventory, id: string, input: Omit<Produ
   if (inv.products.some((product) => product.sku === input.sku && product.id !== id)) return fail("Já existe um produto com este SKU.")
   if (input.ean && inv.products.some((product) => product.ean === input.ean && product.id !== id))
     return fail("Este código de barras já está em uso em outro produto.")
-  const { ean, unit, ncm, cfop, active, ...rest } = input
+  const { ean, unit, ncm, cfop, active, image, ...rest } = input
+  const { image: currentImage, ...base } = current
+  // Foto: ausente mantém a atual, null remove.
+  const nextImage = image === undefined ? currentImage : image
   const updated: Product = {
-    ...current,
+    ...base,
     ...rest,
+    ...(nextImage ? { image: nextImage } : {}),
     active: active ?? current.active,
     ean: ean ?? current.ean,
     unit: unit ?? current.unit,

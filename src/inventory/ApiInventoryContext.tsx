@@ -19,6 +19,8 @@ type ApiProduto = {
   quantidade_minima: number
   ncm?: string | null
   cfop?: string | null
+  /** Foto do produto: data URI reduzido no navegador antes do envio. */
+  imagem_url?: string | null
   ativo: boolean
   criado_em: string
 }
@@ -65,6 +67,7 @@ function build(raw: Raw): StoreInventory {
     costCents: cents(item.preco_custo),
     ncm: item.ncm ?? "",
     cfop: item.cfop ?? "",
+    ...(item.imagem_url ? { image: item.imagem_url } : {}),
     stock: item.quantidade_atual,
     minStock: item.quantidade_minima,
     active: item.ativo,
@@ -208,6 +211,7 @@ export function ApiInventoryProvider({ children }: { children: ReactNode }) {
             ...(input.ean ? { ean_gtin: input.ean } : {}),
             ...(input.ncm ? { ncm: input.ncm } : {}),
             ...(input.cfop ? { cfop: input.cfop } : {}),
+            ...(input.image ? { imagem_url: input.image } : {}),
             quantidade_atual: input.stock,
           })
           if (input.active === false && created.ativo) await api.patch(`/produto/${created.id}/inativar`)
@@ -228,6 +232,8 @@ export function ApiInventoryProvider({ children }: { children: ReactNode }) {
             ean_gtin: input.ean || null,
             ncm: input.ncm || null,
             cfop: input.cfop || null,
+            // Só vai quando a foto mudou: undefined mantém, null remove.
+            ...(input.image !== undefined ? { imagem_url: input.image } : {}),
           })
           if (input.active !== undefined && current && input.active !== current.active) await api.patch(`/produto/${id}/${input.active ? "reativar" : "inativar"}`)
           if (current && input.category !== current.category) await link(id, input.category, current.category === NO_CATEGORY ? undefined : current.category)
