@@ -1,4 +1,4 @@
-import { Pencil, UserMinus, UserPlus } from "lucide-react"
+import { MailX, Pencil, UserMinus, UserPlus } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import Avatar from "@/components/Avatar"
@@ -13,7 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Limits } from "@/billing/plan"
 import { formatBirthDate } from "@/lib/format"
 import type { StoreRole } from "@/store/store-context"
-import { config } from "@/config"
 import { ROLE_LABEL, ROLE_TONE, assignableRoles, canManageMember, checkChangeRole, checkRemove, type Member } from "@/team/team"
 import type { Team } from "@/team/useTeam"
 
@@ -32,6 +31,7 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
+  const [canceling, setCanceling] = useState<Member | null>(null)
   const [error, setError] = useState("")
 
   const roles = assignableRoles(actor)
@@ -66,6 +66,16 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
     setEditing(null)
     setError("")
     onNotify(`Cargo de ${target.name} atualizado.`)
+  }
+
+  async function cancelInvite() {
+    if (!canceling) return
+    const target = canceling
+    const result = await team.cancelInvite(target.id)
+    if (!result.ok) return setError(result.error)
+    setCanceling(null)
+    setError("")
+    onNotify(`Convite para ${target.email} cancelado.`, "info")
   }
 
   async function remove() {
@@ -116,8 +126,8 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
         </TableHeader>
         <TableBody>
           {members.map((member) => {
-            // Na API o convite pendente não tem rota de edição nem de remoção.
-            const manageable = canManageMember(actor, member) && !(config.useApi && member.status === "convite")
+            const manageable = canManageMember(actor, member)
+            const invite = member.status === "convite"
             // Ninguém altera o próprio cargo nem se remove da equipe: a linha de quem está logado fica sem ações.
             const isSelf = member.email.toLowerCase() === self.email.toLowerCase()
             return (
@@ -144,6 +154,22 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
                 <TableCell className="text-right">
                   {isSelf ? (
                     <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-amber)]">Você</span>
+                  ) : invite ? (
+                    // Convite ainda não aceito: não há cargo a editar nem acesso a tirar, só o convite a cancelar.
+                    <button
+                      type="button"
+                      aria-label={`Cancelar convite de ${member.email}`}
+                      title={manageable ? "Cancelar convite" : "Sem permissão para cancelar este convite"}
+                      disabled={!manageable}
+                      onClick={() => {
+                        setError("")
+                        setCanceling(member)
+                      }}
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-bold text-[var(--color-alert)] transition hover:bg-[var(--color-alert-soft)] disabled:opacity-40"
+                    >
+                      <MailX className="h-[18px] w-[18px]" />
+                      <span className="hidden sm:inline">Cancelar convite</span>
+                    </button>
                   ) : (
                   <span className="inline-flex gap-1">
                     <button
@@ -264,6 +290,25 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
             Manter na equipe
           </Button>
           <Button onClick={remove}>Desvincular</Button>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={canceling !== null}
+        onClose={() => setCanceling(null)}
+        title="Cancelar convite?"
+        description={canceling ? `${canceling.email} não vai mais conseguir entrar nesta loja pelo convite, e a vaga volta para a equipe. Dá para convidar de novo depois.` : undefined}
+      >
+        {error && canceling && (
+          <p role="alert" className="mb-4 rounded-xl bg-[var(--color-alert-soft)] px-3 py-2 text-xs font-medium text-[var(--color-alert-dark)]">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => setCanceling(null)}>
+            Manter convite
+          </Button>
+          <Button onClick={cancelInvite}>Cancelar convite</Button>
         </div>
       </Dialog>
     </Card>
