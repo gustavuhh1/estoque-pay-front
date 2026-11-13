@@ -1,11 +1,10 @@
 import { Bell, Menu, ShoppingCart } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import Avatar from "@/components/Avatar"
+import CashStatus from "@/components/layout/CashStatus"
 import GlobalSearch from "@/components/layout/GlobalSearch"
 import StoreSwitcher from "@/components/layout/StoreSwitcher"
 import { useAuth } from "@/auth/useAuth"
-import { useStores } from "@/store/useStores"
 
 type DashboardHeaderProps = {
   onOpenSidebar: () => void
@@ -18,10 +17,7 @@ type DashboardHeaderProps = {
 
 /** Topo de todas as telas do painel (64 px, mesma altura da área do logo na sidebar). */
 export default function DashboardHeader({ onOpenSidebar, pdv = false }: DashboardHeaderProps) {
-  const { isBetterAuth, session } = useAuth()
-  const { activeStore } = useStores()
-
-  const name = session?.user.name ?? "Usuário"
+  const { isBetterAuth } = useAuth()
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-white/95 backdrop-blur">
@@ -68,13 +64,10 @@ export default function DashboardHeader({ onOpenSidebar, pdv = false }: Dashboar
             <Bell className="h-5 w-5" />
             <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-alert)]" />
           </button>
-          <Link to="/perfil" aria-label="Meu perfil" className="flex items-center gap-3 rounded-xl border-[var(--color-border)] transition hover:opacity-80 sm:border-l sm:pl-4">
-            <div className="hidden text-right xl:block">
-              <p className="max-w-[160px] truncate text-sm font-bold">{name}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-slate)]">{activeStore.role}</p>
-            </div>
-            <Avatar name={name} src={session?.user.image} size={40} />
-          </Link>
+          {/* Nome, cargo e foto já estão na sidebar; aqui fica a situação do caixa. */}
+          <div className="border-[var(--color-border)] sm:border-l sm:pl-4">
+            <CashStatus />
+          </div>
         </div>
       </div>
     </header>

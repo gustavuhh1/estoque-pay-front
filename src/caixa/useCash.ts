@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 import { useAuth } from "@/auth/useAuth"
 import { openShift, readShifts, writeShifts, type Shift } from "@/caixa/caixa"
@@ -49,7 +49,8 @@ export type Cash = {
   close: (countedCents: number) => Promise<Result<null>>
 }
 
-export function useCash(): Cash {
+/** Estado do caixa da loja ativa. Usado só pelo CashProvider; as telas leem pelo useCash. */
+export function useCashState(): Cash {
   const { activeStore } = useStores()
   const { session } = useAuth()
   const storeId = activeStore.id
@@ -125,4 +126,13 @@ export function useCash(): Cash {
   )
 
   return useMemo(() => ({ shift, isLoading: config.useApi && !loaded && !error, error, open, close }), [close, error, loaded, open, shift])
+}
+
+export const CashContext = createContext<Cash | null>(null)
+
+/** Caixa compartilhado pelo painel: abrir em Vendas atualiza na hora o topo e o PDV. */
+export function useCash(): Cash {
+  const cash = useContext(CashContext)
+  if (!cash) throw new Error("useCash precisa estar dentro do CashProvider")
+  return cash
 }
