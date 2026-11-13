@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react"
 
 import Avatar from "@/components/Avatar"
 import Field from "@/components/Field"
+import { HELP } from "@/components/settings/help-texts"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog } from "@/components/ui/dialog"
@@ -195,7 +196,7 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
             <Field id="member-name" label="Nome (opcional)">
               <Input id="member-name" name="name" placeholder="Ex: Ana Lima" />
             </Field>
-            <Field id="member-role" label="Cargo">
+            <Field id="member-role" label="Cargo" help={HELP.role}>
               <Select id="member-role" name="role" defaultValue={roles.includes("Colaborador") ? "Colaborador" : roles[0]}>
                 {roles.map((role) => (
                   <option key={role} value={role}>
@@ -224,7 +225,7 @@ export default function TeamTab({ team, actor, self, limits, onNotify }: TeamTab
       {editing && (
         <Dialog open onClose={() => setEditing(null)} title={`Editar cargo de ${editing.name}`} widthClass="max-w-[440px]">
           <form onSubmit={saveRole} noValidate className="space-y-4">
-            <Field id="edit-role" label="Cargo">
+            <Field id="edit-role" label="Cargo" help={HELP.role}>
               <Select id="edit-role" name="role" defaultValue={editing.role}>
                 {(["Owner", "Gestor", "Colaborador"] as StoreRole[])
                   .filter((role) => roles.includes(role) || role === editing.role)
