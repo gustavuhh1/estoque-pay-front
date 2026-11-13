@@ -1,10 +1,11 @@
 import { Banknote, Download, FileDown, FileText, Lock, LockOpen, QrCode, RotateCcw, Search, TriangleAlert, X } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import CategoryScroller from "@/components/CategoryScroller"
 import MetricCard from "@/components/MetricCard"
 import PageHeader from "@/components/PageHeader"
 import CashDialog from "@/components/sales/CashDialog"
+import DateRangeFilter from "@/components/sales/DateRangeFilter"
 import NoteDialog from "@/components/sales/NoteDialog"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -14,7 +15,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Toast, type ToastTone } from "@/components/ui/toast"
 import { shiftTotals } from "@/caixa/caixa"
 import { useCash } from "@/caixa/useCash"
+import { config } from "@/config"
+import { api, errorMessage } from "@/lib/api"
+import { rangeBounds, rangeLabel, type DateRange } from "@/lib/dateRange"
 import { downloadCsv } from "@/lib/download"
+import { vendaToSale, type ApiVenda } from "@/pdv/pdvApi"
 import { formatBRL, formatDateTime, normalizeText, saleLabel } from "@/lib/format"
 import { PAYMENT_LABELS, type Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
@@ -29,6 +34,52 @@ const pill = "inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 
 
 const timeFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 const hourFormatter = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" })
+
+/**
+ * Vendas do período. O contexto só traz as 100 mais recentes, então com a API o período é pedido ao
+ * servidor (filtros `de`/`ate`, página a página); no modo demonstração filtra o que já está na tela.
+ * `sales` entra como dependência para recarregar depois de um cancelamento.
+ */
+function useSalesInRange(range: DateRange | null, sales: Sale[]) {
+  const [remote, setRemote] = useState<{ key: string; list: Sale[]; error: string } | null>(null)
+  const key = range ? `${range.from}|${range.to}` : ""
+  const useServer = config.useApi && range !== null
+
+  useEffect(() => {
+    if (!useServer || !range) return
+    let cancelled = false
+    const { start, end } = rangeBounds(range)
+    const query = { de: new Date(start).toISOString(), ate: new Date(end).toISOString(), limite: 100 }
+    ;(async () => {
+      const list: ApiVenda[] = []
+      // Até 1.000 vendas no período: suficiente para a tela, sem prender o navegador.
+      for (let pagina = 1; pagina <= 10; pagina++) {
+        const page = await api.get<{ itens: ApiVenda[]; total: number }>("/venda", { query: { ...query, pagina } })
+        list.push(...page.itens)
+        if (list.length >= page.total || page.itens.length === 0) break
+      }
+      return list.map(vendaToSale)
+    })().then(
+      (list) => !cancelled && setRemote({ key, list, error: "" }),
+      (failure: unknown) => !cancelled && setRemote({ key, list: [], error: errorMessage(failure) }),
+    )
+    return () => {
+      cancelled = true
+    }
+    // `range` muda de identidade a cada render do pai; `key` resume o que importa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, useServer, sales])
+
+  return useMemo(() => {
+    if (!range) return { list: sales, loading: false, error: "" }
+    if (useServer) {
+      const ready = remote?.key === key
+      return { list: ready ? remote.list : [], loading: !ready, error: ready ? remote.error : "" }
+    }
+    const { start, end } = rangeBounds(range)
+    return { list: sales.filter((sale) => sale.createdAt >= start && sale.createdAt <= end), loading: false, error: "" }
+  }, [key, range, remote, sales, useServer])
+}
 
 function StatusPill({ sale }: { sale: Sale }) {
   if (sale.status === "concluida")
@@ -77,6 +128,8 @@ export default function Sales() {
   const cashState = useCash()
   const [filter, setFilter] = useState<Filter>("Todas")
   const [query, setQuery] = useState("")
+  const [range, setRange] = useState<DateRange | null>(null)
+  const inRange = useSalesInRange(range, sales)
   const [noteOf, setNoteOf] = useState<Sale | null>(null)
   const [canceling, setCanceling] = useState<Sale | null>(null)
   const [cancelError, setCancelError] = useState("")
@@ -91,10 +144,12 @@ export default function Sales() {
   // Vendas que batem com a busca (antes da situação): base da lista e da contagem em cada situação.
   const matching = useMemo(() => {
     const term = normalizeText(query).replace(/^#/, "")
-    return [...sales]
+    return [...inRange.list]
       .sort((a, b) => b.createdAt - a.createdAt)
       .filter((sale) => !term || normalizeText(`${saleLabel(sale)} ${sale.customerName ?? ""} ${sale.items.map((item) => item.name).join(" ")}`).includes(term))
-  }, [sales, query])
+  }, [inRange.list, query])
+  // Resumo do período escolhido: só as vendas pagas entram no faturamento.
+  const rangePaid = useMemo(() => matching.filter((sale) => sale.status === "concluida"), [matching])
   const counts = useMemo(() => {
     const result: Record<string, number> = { Todas: matching.length }
     for (const item of FILTERS) if (item !== "Todas") result[item] = matching.filter((sale) => sale.status === STATUS_OF[item]).length
@@ -216,7 +271,7 @@ export default function Sales() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Buscar venda"
-            placeholder="Buscar por código, cliente ou produto"
+            placeholder="Código, cliente ou produto"
             className="h-11 border-[var(--color-border)] bg-white pl-10 pr-10"
           />
           {query && (
@@ -230,16 +285,43 @@ export default function Sales() {
             </button>
           )}
         </div>
+        <div className="shrink-0">
+          <DateRangeFilter value={range} onChange={setRange} />
+        </div>
         <div className="min-w-0 flex-1">
           <CategoryScroller label="Situação" items={FILTERS} counts={counts} active={filter} onSelect={(item) => setFilter(item as Filter)} />
         </div>
       </div>
 
+      {range && !inRange.loading && !inRange.error && (
+        <p aria-live="polite" className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-[var(--color-stock-green-soft)] px-4 py-2.5 text-sm text-[var(--color-ink)]">
+          <span className="font-bold text-[var(--color-amber-dark)]">{rangeLabel(range)}:</span>
+          <span>
+            {rangePaid.length} {rangePaid.length === 1 ? "venda paga" : "vendas pagas"} somando{" "}
+            <strong className="tabular-nums">{formatBRL(rangePaid.reduce((sum, sale) => sum + sale.totalCents, 0))}</strong>
+          </span>
+          {rangePaid.length > 0 && (
+            <span className="text-[var(--color-slate)]">· ticket médio {formatBRL(Math.round(rangePaid.reduce((sum, sale) => sum + sale.totalCents, 0) / rangePaid.length))}</span>
+          )}
+        </p>
+      )}
+
       <Card className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white p-0 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
-        {sales.length === 0 ? (
+        {inRange.loading ? (
+          <p role="status" className="px-6 py-14 text-center text-sm text-[var(--color-slate)]">Buscando as vendas do período…</p>
+        ) : inRange.error ? (
+          <p role="alert" className="px-6 py-14 text-center text-sm font-semibold text-[var(--color-alert-dark)]">Não foi possível buscar as vendas do período: {inRange.error}</p>
+        ) : sales.length === 0 && !range ? (
           <p className="px-6 py-14 text-center text-sm text-[var(--color-slate)]">Nenhuma venda registrada. Registre a primeira venda no PDV para ver o histórico aqui.</p>
         ) : rows.length === 0 ? (
-          <p className="px-6 py-14 text-center text-sm font-semibold">Nenhuma venda encontrada com esses filtros.</p>
+          <div className="px-6 py-14 text-center">
+            <p className="text-sm font-semibold">{range && inRange.list.length === 0 ? "Nenhuma venda nesse período." : "Nenhuma venda encontrada com esses filtros."}</p>
+            {range && (
+              <button type="button" onClick={() => setRange(null)} className="mt-2 text-sm font-bold text-[var(--color-amber)] hover:underline">
+                Ver todas as datas
+              </button>
+            )}
+          </div>
         ) : (
           <>
             {/* Celular: lista compacta, sem rolagem lateral. */}
