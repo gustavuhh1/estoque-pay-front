@@ -119,9 +119,36 @@ input {
   animation: search-item-in 180ms ease-out both;
 }
 
+/* Sininho: balança uma vez quando chega notificação não lida; o painel abre deslizando. */
+@keyframes bell-ring {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+}
+.notifications-enter {
+  animation: search-item-in 160ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast-enter,
-  .search-item-enter {
+  .search-item-enter,
+  .notifications-enter {
     animation: none;
   }
 }

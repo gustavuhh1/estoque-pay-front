@@ -1,4 +1,5 @@
 import { config } from "@/config"
+import { isNotificationTrigger, requestNotificationsRefresh } from "@/notifications/events"
 
 /** Erro devolvido pela API: o `code` é o contrato estável (nunca decidir pelo texto da mensagem). */
 export class ApiError extends Error {
@@ -87,6 +88,8 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     const body = (payload ?? {}) as { code?: string; message?: string; details?: unknown }
     throw new ApiError(response.status, body.code ?? `HTTP_${response.status}`, body.message ?? `Erro ${response.status} ao falar com o servidor.`, body.details)
   }
+  // Venda, cancelamento, saída de estoque e fechamento de caixa podem gerar aviso: o sininho recarrega na hora.
+  if (isNotificationTrigger(method, path)) requestNotificationsRefresh()
   return payload as T
 }
 
