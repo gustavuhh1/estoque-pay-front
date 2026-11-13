@@ -60,7 +60,9 @@ export function useCashState(): Cash {
   const [state, setState] = useState<{ storeId: string; shift: Shift | null } | null>(() =>
     config.useApi ? null : { storeId, shift: openShift(readShifts(storeId)) ?? null },
   )
-  const [error, setError] = useState<string | null>(null)
+  // O erro fica amarrado à loja que falhou: ao trocar de loja volta ao "carregando" até a resposta.
+  const [failed, setFailed] = useState<{ storeId: string; message: string } | null>(null)
+  const error = failed?.storeId === storeId ? failed.message : null
 
   useEffect(() => {
     if (!config.useApi || !storeId) return
@@ -69,10 +71,10 @@ export function useCashState(): Cash {
       (shift) => {
         if (cancelled) return
         setState({ storeId, shift })
-        setError(null)
+        setFailed(null)
       },
       (failure: unknown) => {
-        if (!cancelled) setError(errorMessage(failure))
+        if (!cancelled) setFailed({ storeId, message: errorMessage(failure) })
       },
     )
     return () => {
@@ -80,8 +82,10 @@ export function useCashState(): Cash {
     }
   }, [storeId])
 
+  // O provider vive no layout e não remonta ao trocar de loja: no modo demonstração o turno
+  // da loja nova é lido na hora do armazenamento local (até a primeira abertura/fechamento gravar no estado).
   const loaded = state !== null && state.storeId === storeId
-  const shift = loaded ? state.shift : null
+  const shift = loaded ? state.shift : config.useApi ? null : (openShift(readShifts(storeId)) ?? null)
 
   const open = useCallback(
     async (openingCents: number): Promise<Result<Shift>> => {
