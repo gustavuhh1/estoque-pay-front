@@ -65,7 +65,9 @@ const dateLabel =new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-di
 /** Emissão de cupom: individual (um cliente, uma vez) ou global (cada CPF uma vez), em % ou R$, com validade opcional. */
 export default function CouponDialog({ customers, initialCustomerId, onIssue, onClose }: CouponDialogProps) {
   const [scope, setScope] = useState<Scope>(initialCustomerId ? "individual" : "global")
-  const [customerId, setCustomerId] = useState(initialCustomerId ?? customers[0]?.id ?? "")
+  const [picked, setCustomerId] = useState(initialCustomerId ?? "")
+  // Os clientes podem chegar depois de o diálogo abrir (API acordando): sem escolha, vale o primeiro da lista.
+  const customerId = picked || customers[0]?.id || ""
   const [type, setType] = useState<CouponInput["type"]>("percent")
   const [percent, setPercent] = useState("10")
   const [value, setValue] = useState("")
@@ -87,7 +89,7 @@ export default function CouponDialog({ customers, initialCustomerId, onIssue, on
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (scope === "individual" && !customerId) return setError("Cadastre um cliente antes de emitir um cupom individual.")
-    if (type === "percent" && (!Number.isFinite(percentNumber) || percentNumber <= 0 || percentNumber > 100)) return setError("A porcentagem precisa estar entre 1% e 100%.")
+    if (type === "percent" && (!Number.isFinite(percentNumber) || percentNumber < 0.01 || percentNumber > 100)) return setError("A porcentagem precisa estar entre 0,01% e 100%.")
     if (type === "value" && (valueCents === null || valueCents <= 0)) return setError("Informe o valor do desconto em reais (ex.: 5,00).")
     if (validity === "date" && !date) return setError("Escolha a data de validade.")
     const typed = code.trim().toUpperCase()

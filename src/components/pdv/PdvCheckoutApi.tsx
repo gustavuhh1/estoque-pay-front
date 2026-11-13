@@ -198,7 +198,7 @@ export default function PdvCheckoutApi({ cart, totalCents, onClose, onFinish }: 
   /** Venda confirmada pela API: recarrega estoque e histórico e busca o espelho da NFC-e, se a loja emite. */
   async function conclude(paid: Sale) {
     // O cliente anexado aparece no comprovante; a API já guardou o vínculo.
-    const sale: Sale = buyer.customer ? { ...paid, customerName: buyer.customer.name, cpf: buyer.customer.cpf.replace(/D/g, "") } : paid
+    const sale: Sale = buyer.customer ? { ...paid, customerName: buyer.customer.name, cpf: buyer.customer.cpf.replace(/\D/g, "") } : paid
     await reload()
     let espelho: Espelho | null = null
     if (nfceOn) {
