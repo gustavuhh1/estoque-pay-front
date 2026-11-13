@@ -142,6 +142,13 @@ export type ApiVenda = {
   operador_nome?: string | null
 }
 
+/**
+ * Desconto do cupom em centavos. A listagem de vendas não manda o campo `desconto`: aí ele sai da própria
+ * venda, subtotal dos itens − total (que já vem sem o cupom e sem a taxa do Pix).
+ */
+const discountOf = (item: ApiVenda) =>
+  item.desconto ? cents(item.desconto) : Math.max(0, item.itens.reduce((sum, line) => sum + cents(line.subtotal), 0) - cents(item.total_venda))
+
 export function vendaToSale(item: ApiVenda): Sale {
   return {
     id: item.id,
@@ -155,7 +162,7 @@ export function vendaToSale(item: ApiVenda): Sale {
     ...(item.cancelada_em ? { canceledAt: Date.parse(item.cancelada_em) } : {}),
     ...(item.taxa_split ? { pixFeeCents: cents(item.taxa_split) } : {}),
     ...(item.cliente_id ? { customerId: item.cliente_id } : {}),
-    ...(item.desconto ? { discountCents: cents(item.desconto) } : {}),
+    ...(discountOf(item) > 0 ? { discountCents: discountOf(item) } : {}),
     ...(item.cupom_codigo ? { couponCode: item.cupom_codigo } : {}),
     ...(item.operador_nome ? { operator: item.operador_nome } : {}),
     // Só há número de nota quando a NFC-e simulada foi emitida para a venda.

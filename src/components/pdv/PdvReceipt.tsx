@@ -96,7 +96,7 @@ export default function PdvReceipt({ sale, store, operator, plain = false }: Pdv
             <span>{formatBRL(sale.totalCents + sale.discountCents)}</span>
           </div>
           <div className="flex justify-between text-[11px] text-[#333]">
-            <span>DESCONTO CUPOM {sale.couponCode}</span>
+            <span>DESCONTO{sale.couponCode ? ` CUPOM ${sale.couponCode}` : " (CUPOM)"}</span>
             <span>-{formatBRL(sale.discountCents)}</span>
           </div>
         </>
