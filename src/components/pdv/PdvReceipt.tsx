@@ -19,11 +19,14 @@ type PdvReceiptProps = {
   sale: Sale
   store: Store
   operator: string
+  /** Força o comprovante não fiscal mesmo numa venda com NFC-e (histórico de Vendas). */
+  plain?: boolean
 }
 
 /** Espelho do cupom exibido ao concluir a venda (layout do design system). */
-export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
+export default function PdvReceipt({ sale, store, operator, plain = false }: PdvReceiptProps) {
   const paid = sale.receivedCents ?? sale.totalCents + (sale.pixFeeCents ?? 0)
+  const fiscal = sale.nfce !== false && !plain
 
   return (
     <div className={`print-receipt mx-auto w-[340px] max-w-full rounded-md border border-[var(--color-border)] bg-white px-5 py-[22px] shadow-sm ${mono}`}>
@@ -38,7 +41,7 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
       </div>
       <div className={dash} />
       <div className="text-center text-[11px] leading-[1.6] text-[#111]">
-        {sale.nfce === false ? (
+        {!fiscal ? (
           <>
             COMPROVANTE DE VENDA
             <br />
@@ -58,6 +61,11 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
         <br />
         {dateFormatter.format(sale.createdAt)} às {timeFormatter.format(sale.createdAt)}
       </div>
+      {sale.status !== "concluida" && (
+        <div className="mt-2.5 rounded border-2 border-[#111] py-1 text-center text-xs font-bold tracking-[0.12em] text-[#111]">
+          {sale.status === "cancelada" ? "VENDA CANCELADA" : "AGUARDANDO PAGAMENTO"}
+        </div>
+      )}
       <div className={dash} />
       <div className="flex justify-between text-[10px] text-[#666]">
         <span>ITEM / QTD × UNIT</span>
@@ -121,9 +129,9 @@ export default function PdvReceipt({ sale, store, operator }: PdvReceiptProps) {
       {sale.customerName && <div className="mt-0.5 text-center text-[11px] uppercase text-[#444]">{sale.customerName}</div>}
       <div className={dash} />
       <div className="rounded border border-dashed border-[#999] px-2 py-1.5 text-center text-[10px] font-bold leading-[1.5] text-[#111]">
-        DOCUMENTO SEM VALOR FISCAL{sale.nfce === false ? "" : " — SIMULAÇÃO"}
+        DOCUMENTO SEM VALOR FISCAL{fiscal ? " — SIMULAÇÃO" : ""}
         <br />
-        {sale.nfce === false ? "(sem emissão de NFC-e neste plano)" : "(emissão real fora do escopo do projeto)"}
+        {fiscal ? "(emissão real fora do escopo do projeto)" : sale.nfce === false ? "(sem emissão de NFC-e neste plano)" : "(comprovante para conferência)"}
       </div>
       <div className="mt-2.5 text-center text-[10px] leading-[1.6] text-[#666]">
         ESPELHO PARA CONFERÊNCIA DO OPERADOR
