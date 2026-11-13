@@ -43,6 +43,8 @@ export type Team = {
   add: (input: { name: string; email: string; role: StoreRole }) => Promise<Result<null>>
   changeRole: (id: string, role: StoreRole) => Promise<Result<null>>
   remove: (id: string) => Promise<Result<null>>
+  /** Cancela um convite ainda não aceito; a vaga volta para a loja. */
+  cancelInvite: (id: string) => Promise<Result<null>>
 }
 
 const ok: Result<null> = { ok: true, value: null }
@@ -136,5 +138,27 @@ export function useTeam(storeId: string, self: { name: string; email: string; ro
     [demo, reload, storeId],
   )
 
-  return useMemo(() => ({ members, isLoading: config.useApi && !loaded && !error, error, add, changeRole, remove }), [add, changeRole, error, loaded, members, remove])
+  const cancelInvite = useCallback(
+    async (id: string): Promise<Result<null>> => {
+      if (!config.useApi) {
+        const next = demo.filter((member) => member.id !== id)
+        if (!writeMembers(storeId, next)) return fail(new Error("O navegador não permitiu salvar a equipe."))
+        setDemo(next)
+        return ok
+      }
+      try {
+        await api.delete(`/equipe/convites/${id}`)
+        await reload()
+        return ok
+      } catch (failure) {
+        return fail(failure)
+      }
+    },
+    [demo, reload, storeId],
+  )
+
+  return useMemo(
+    () => ({ members, isLoading: config.useApi && !loaded && !error, error, add, changeRole, remove, cancelInvite }),
+    [add, cancelInvite, changeRole, error, loaded, members, remove],
+  )
 }
