@@ -2,6 +2,7 @@ import { Save, ScanBarcode, TrendingDown, TrendingUp } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import Field from "@/components/Field"
+import ProductPhotoField from "@/components/stock/ProductPhotoField"
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -97,6 +98,7 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
   const { nfceOn: nfceEnabled, limits } = usePlan()
 
   const [form, setForm] = useState<RawProductForm>(() => ({ ...toForm(product, categories[0] ?? "", activeStore.cfopDefault ?? ""), ...(product ? {} : { ean: initialEan }) }))
+  const [image, setImage] = useState<string | null>(product?.image ?? null)
   const [scannedAt, setScannedAt] = useState<number | null>(null)
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [formError, setFormError] = useState("")
@@ -145,9 +147,11 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
     if (limits.maxProducts !== null && becomesActive && activeCount >= limits.maxProducts)
       return setFormError(`O plano Free permite até ${limits.maxProducts} produtos ativos. Inative um produto ou assine o Premium.`)
     // Um envio por vez: o duplo clique cadastrava o mesmo produto duas vezes.
+    // A foto só é enviada quando mudou (na edição, ausente = manter a atual).
+    const photo = image !== (product?.image ?? null) ? { image } : {}
     void run(async () => {
       // O estoque inicial entra no histórico como "Estoque inicial" (a API grava a entrada junto com o produto).
-      const result = await (product ? updateProduct(product.id, input) : createProduct({ ...input, stock: initialStock }))
+      const result = await (product ? updateProduct(product.id, { ...input, ...photo }) : createProduct({ ...input, ...photo, stock: initialStock }))
       if (!result.ok) return setFormError(result.error)
       onSaved(
         fiscalLocked
@@ -167,6 +171,9 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
     >
       <form onSubmit={submit} noValidate>
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <ProductPhotoField value={image} onChange={setImage} disabled={busy} />
+          </div>
           <div className="sm:col-span-2">
             <Field id="name" label="Nome do produto" error={errors.name} required>
               <Input id="name" aria-required="true" value={form.name} onChange={set("name")} placeholder="Ex: Café Bourbon Special" autoFocus {...aria("name")} />

@@ -20,7 +20,7 @@ export type Product = {
   /** Dados fiscais: obrigatórios apenas enquanto a NFC-e estiver ligada. */
   ncm: string
   cfop: string
-  /** Foto do produto (caminho público). Sem foto, a interface mostra um ícone. */
+  /** Foto do produto: data URI enviado no cadastro (ou caminho público nos produtos de demonstração). Sem foto, a interface mostra um ícone. */
   image?: string
   stock: number
   minStock: number
@@ -40,6 +40,8 @@ export type ProductInput = {
   unit?: Unit
   ncm?: string
   cfop?: string
+  /** Foto (data URI já reduzido). Na edição: ausente mantém a atual, null remove. */
+  image?: string | null
   /** Padrão: ativo. A trava fiscal pode forçar inativo. */
   active?: boolean
 }

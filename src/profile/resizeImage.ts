@@ -1,15 +1,20 @@
 /** Mesmo limite da API (~100 KB de imagem em base64). */
 export const MAX_PHOTO_CHARS = 140_000
 const SIZE = 256
-const ACCEPTED = ["image/png", "image/jpeg", "image/webp"]
+/** A imagem é redesenhada num canvas e sempre sai como WebP/JPEG, então dá para aceitar GIF, BMP e AVIF também. */
+const ACCEPTED = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/avif"]
+/** Valor pronto para o `accept` do <input type="file">. */
+export const PHOTO_ACCEPT = ACCEPTED.join(",")
 
 /**
  * Corta a foto no centro (quadrado), reduz para 256 px e devolve um data URI pequeno o bastante para a API.
  * Tenta WebP e cai para JPEG se o navegador não gerar WebP; baixa a qualidade até caber no limite.
  */
 export async function resizePhoto(file: File): Promise<string> {
-  if (!ACCEPTED.includes(file.type)) throw new Error("Use uma imagem PNG, JPEG ou WebP.")
-  const bitmap = await createImageBitmap(file)
+  if (!ACCEPTED.includes(file.type)) throw new Error("Use uma imagem PNG, JPEG, WebP ou GIF.")
+  const bitmap = await createImageBitmap(file).catch(() => {
+    throw new Error("Não foi possível abrir esta imagem. Tente outra (PNG ou JPEG).")
+  })
   const side = Math.min(bitmap.width, bitmap.height)
   const canvas = document.createElement("canvas")
   canvas.width = SIZE
