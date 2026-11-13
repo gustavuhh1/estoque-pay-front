@@ -228,17 +228,31 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
           <Field id="minStock" label="Quantidade mínima" error={errors.minStock} hint={errors.minStock ? undefined : "Abaixo disso o produto entra em “para repor”."}>
             <Input id="minStock" value={form.minStock} onChange={set("minStock")} inputMode="decimal" placeholder="10" className={mono} {...aria("minStock")} />
           </Field>
-          <Field id="cost" label="Preço de custo" error={errors.cost}>
+          <Field id="cost" label="Preço de custo" error={errors.cost} help="Quanto você pagou por uma unidade do produto ao fornecedor. Com ele o sistema mostra seu lucro e impede vender no prejuízo.">
+
             <MoneyInput id="cost" value={form.cost} onValueChange={(value) => set("cost")({ target: { value } })} placeholder="0,00" {...aria("cost")} />
           </Field>
           <Field id="price" label="Preço de venda" error={errors.price} hint="A trava anti-prejuízo bloqueia venda abaixo do custo." required>
             <MoneyInput id="price" aria-required="true" value={form.price} onValueChange={(value) => set("price")({ target: { value } })} placeholder="0,00" {...aria("price")} />
           </Field>
           <ProfitPreview cost={form.cost} price={form.price} />
-          <Field id="ncm" label="NCM" error={errors.ncm} required={nfceEnabled}>
+          <Field
+            id="ncm"
+            label="NCM"
+            error={errors.ncm}
+            required={nfceEnabled}
+            help="É o “RG” do produto para a Receita: um código de 8 números que diz o que ele é (ex.: café torrado = 0901.21.00). Está na nota fiscal de compra do seu fornecedor; se não achar, peça ao seu contador."
+          >
             <Input id="ncm" aria-required={nfceEnabled} value={form.ncm} onChange={set("ncm")} inputMode="numeric" placeholder="0901.21.00" className={mono} {...aria("ncm")} />
           </Field>
-          <Field id="cfop" label="CFOP" error={errors.cfop} hint="5102 para venda dentro do estado." required={nfceEnabled}>
+          <Field
+            id="cfop"
+            label="CFOP"
+            error={errors.cfop}
+            hint="5102 para venda dentro do estado."
+            required={nfceEnabled}
+            help="Código de 4 números que diz o tipo da venda na nota fiscal. Para quem revende produtos comprados de outros, vendendo ao consumidor no balcão, quase sempre é 5102. Na dúvida, confirme com seu contador."
+          >
             <Input id="cfop" aria-required={nfceEnabled} value={form.cfop} onChange={set("cfop")} inputMode="numeric" placeholder="5102" className={mono} {...aria("cfop")} />
           </Field>
           <div className="sm:col-span-2">
