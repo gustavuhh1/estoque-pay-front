@@ -126,6 +126,224 @@ input {
   }
 }
 
+/* Troca de loja (StoreTransition): a fachada atual apaga, a rua passa e o carrinho entra na loja nova.
+   Linha do tempo (ms): 0 cobre a tela · 250 luzes apagam · 600–1600 viagem · 1350 toldo desce ·
+   1600 placa "Aberto" · 1650 carrinho entra · 1750 brilhos. Depois disso só o "carregando" segue. */
+@keyframes st-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes st-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes st-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+}
+@keyframes st-stage-out {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes st-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes st-pan {
+  to {
+    transform: translateX(-420px);
+  }
+}
+@keyframes st-pan-slow {
+  to {
+    transform: translateX(-140px);
+  }
+}
+@keyframes st-dim {
+  to {
+    opacity: 0.12;
+  }
+}
+@keyframes st-light {
+  from {
+    opacity: 0.12;
+  }
+}
+@keyframes st-bob {
+  to {
+    transform: translateY(-2.5px);
+  }
+}
+@keyframes st-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes st-awning {
+  0% {
+    transform: scaleY(0);
+  }
+  70% {
+    transform: scaleY(1.12);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes st-swing {
+  0% {
+    opacity: 0;
+    transform: rotate(-28deg);
+  }
+  45% {
+    opacity: 1;
+    transform: rotate(14deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes st-cart-in {
+  to {
+    opacity: 0;
+    transform: translate(42px, -3px) scale(0.55);
+  }
+}
+@keyframes st-sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+@keyframes st-dot {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@keyframes st-progress {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(310%);
+  }
+}
+
+.st-overlay {
+  animation: st-fade-in 320ms ease-out both;
+}
+.st-overlay.st-leaving {
+  animation: st-fade-out 420ms ease-in forwards;
+}
+.st-stage {
+  animation: st-stage-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.st-leaving .st-stage {
+  animation: st-stage-out 420ms ease-in forwards;
+}
+.st-from {
+  animation: st-rise 400ms ease-out 120ms both;
+}
+.st-to {
+  animation: st-rise 450ms ease-out 380ms both;
+}
+.st-scene g,
+.st-scene path,
+.st-scene rect,
+.st-scene text {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.st-track {
+  animation: st-pan 1000ms cubic-bezier(0.65, 0, 0.35, 1) 600ms both;
+}
+.st-clouds {
+  animation: st-pan-slow 1000ms cubic-bezier(0.65, 0, 0.35, 1) 600ms both;
+}
+.st-lights-off {
+  animation: st-dim 350ms ease-in 250ms both;
+}
+.st-sign-old {
+  animation: st-fade-out 220ms ease-in 300ms both;
+}
+.st-sign-new {
+  animation: st-fade-in 260ms ease-out 420ms both;
+}
+.st-cart-bob {
+  animation: st-bob 250ms ease-in-out 600ms 4 alternate both;
+}
+.st-wheel {
+  animation: st-spin 500ms linear 600ms 2;
+}
+.st-scene .st-awning-in {
+  transform-origin: top;
+  animation: st-awning 450ms cubic-bezier(0.3, 0.7, 0.3, 1) 1350ms both;
+}
+.st-lights-on {
+  animation: st-light 350ms ease-out 1450ms both;
+}
+.st-scene .st-sign-swing {
+  transform-origin: 50% 0;
+  animation: st-swing 650ms ease-out 1600ms both;
+}
+.st-cart-enter {
+  animation: st-cart-in 450ms cubic-bezier(0.5, 0, 0.75, 0) 1650ms forwards;
+}
+.st-sparkle {
+  opacity: 0;
+  animation: st-sparkle 600ms ease-out both;
+}
+.st-dots span {
+  animation: st-dot 1200ms ease-in-out infinite;
+}
+.st-dots span:nth-child(2) {
+  animation-delay: 160ms;
+}
+.st-dots span:nth-child(3) {
+  animation-delay: 320ms;
+}
+.st-progress {
+  animation: st-progress 1100ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Movimento reduzido: só o esmaecer da tela e um spinner, sem cena. */
+@media (prefers-reduced-motion: reduce) {
+  .st-scene,
+  .st-progress-track {
+    display: none;
+  }
+  .st-spinner {
+    display: flex;
+  }
+  .st-stage,
+  .st-leaving .st-stage,
+  .st-from,
+  .st-to,
+  .st-dots span {
+    animation: none;
+  }
+}
+
 /* Impressão do comprovante do PDV: só o recibo aparece no papel. */
 @media print {
   body * {
