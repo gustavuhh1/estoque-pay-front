@@ -2,6 +2,7 @@ import { Save, Upload } from "lucide-react"
 import { useRef, useState, type FormEvent } from "react"
 
 import Field from "@/components/Field"
+import { HELP } from "@/components/settings/help-texts"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -109,29 +110,29 @@ export default function ProfileTab({ store, onSaved }: { store: Store; onSaved: 
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="profile-name" label="Nome fantasia" error={errors.name}>
+          <Field id="profile-name" label="Nome fantasia" help={HELP.name} error={errors.name}>
             <Input id="profile-name" value={name} onChange={(event) => { setName(event.target.value); clear("name") }} autoComplete="organization" {...aria("name")} />
           </Field>
-          <Field id="profile-cnpj" label="CNPJ / Identificação" error={errors.cnpj}>
+          <Field id="profile-cnpj" label="CNPJ / Identificação" help={HELP.cnpj} error={errors.cnpj}>
             <Input id="profile-cnpj" value={cnpj} onChange={(event) => { setCnpj(maskCnpj(event.target.value)); clear("cnpj") }} inputMode="numeric" placeholder="00.000.000/0000-00" className={mono} {...aria("cnpj")} />
           </Field>
-          <Field id="profile-ie" label="Inscrição estadual">
+          <Field id="profile-ie" label="Inscrição estadual" help={HELP.ie}>
             <Input id="profile-ie" value={ie} onChange={(event) => setIe(event.target.value)} placeholder="082.114.550.119" className={mono} />
           </Field>
           {local && (
             <>
-          <Field id="profile-phone" label="Telefone comercial" error={errors.phone}>
+          <Field id="profile-phone" label="Telefone comercial" help={HELP.phone} error={errors.phone}>
             <Input id="profile-phone" value={phone} onChange={(event) => { setPhone(maskPhone(event.target.value)); clear("phone") }} inputMode="tel" placeholder="(00) 0000-0000" className={mono} {...aria("phone")} />
           </Field>
           <div className="sm:col-span-2">
-            <Field id="profile-address" label="Endereço completo">
+            <Field id="profile-address" label="Endereço completo" help={HELP.address}>
               <Input id="profile-address" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Rua, número, bairro" autoComplete="street-address" />
             </Field>
           </div>
-          <Field id="profile-city" label="Cidade" error={errors.city}>
+          <Field id="profile-city" label="Cidade" help={HELP.city} error={errors.city}>
             <Input id="profile-city" value={city} onChange={(event) => { setCity(event.target.value); clear("city") }} {...aria("city")} />
           </Field>
-          <Field id="profile-state" label="Estado">
+          <Field id="profile-state" label="Estado" help={HELP.state}>
             <Select id="profile-state" value={state} onChange={(event) => setState(event.target.value)}>
               {STATES.map((uf) => (
                 <option key={uf}>{uf}</option>

@@ -2,6 +2,7 @@ import { CreditCard } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import Field from "@/components/Field"
+import { HELP } from "@/components/settings/help-texts"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog } from "@/components/ui/dialog"
@@ -81,7 +82,7 @@ function CardDialog({ mode, cycle: initialCycle, onSubmit, onClose }: { mode: Ca
           <Field id="card-expiry" label="Validade" error={errors.expiry}>
             <Input id="card-expiry" value={expiry} onChange={(event) => { setExpiry(maskExpiry(event.target.value)); clear("expiry") }} inputMode="numeric" autoComplete="off" placeholder="MM/AA" className={mono} />
           </Field>
-          <Field id="card-cvv" label="CVV" error={errors.cvv}>
+          <Field id="card-cvv" label="CVV" help={HELP.cvv} error={errors.cvv}>
             <Input id="card-cvv" value={cvv} onChange={(event) => { setCvv(digitsOf(event.target.value).slice(0, 4)); clear("cvv") }} inputMode="numeric" autoComplete="off" placeholder="000" className={mono} />
           </Field>
         </div>

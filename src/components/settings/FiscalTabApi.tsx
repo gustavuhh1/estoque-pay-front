@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 
 import Field from "@/components/Field"
+import HelpTip from "@/components/HelpTip"
+import { HELP } from "@/components/settings/help-texts"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -110,7 +112,10 @@ export default function FiscalTabApi({ store, limits, onNotify }: FiscalTabApiPr
 
   return (
     <Card className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-[0_10px_35px_rgba(13,28,46,0.05)]">
-      <h2 className="mb-4 text-xl font-bold">Emissão de NFC-e</h2>
+      <div className="mb-4 flex items-center gap-1.5">
+        <h2 className="text-xl font-bold">Emissão de NFC-e</h2>
+        <HelpTip label="NFC-e">{HELP.nfce}</HelpTip>
+      </div>
       <Switch
         checked={enabled}
         onChange={(next) => void toggle(next)}
@@ -158,21 +163,21 @@ export default function FiscalTabApi({ store, limits, onNotify }: FiscalTabApiPr
       )}
 
       <div className="my-6 grid gap-4 sm:grid-cols-2">
-        <Field id="fiscal-cert" label="Certificado digital A1" hint="Simulação: o arquivo não é enviado, só o nome dele.">
+        <Field id="fiscal-cert" label="Certificado digital A1" help={HELP.certificate} hint="Simulação: o arquivo não é enviado, só o nome dele.">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex h-11 w-full items-center gap-2.5 rounded-md border border-[var(--color-ink)]/15 bg-white px-3.5 text-left text-sm transition hover:border-[var(--color-green-500)]"
+            className="flex h-11 w-full items-center gap-2.5 rounded-md border border-[var(--color-ink)]/15 bg-white px-3.5 cursor-pointer text-left text-sm transition hover:border-[var(--color-green-500)]"
           >
             <ShieldCheck className="h-4 w-4 text-[var(--color-slate)]" />
             <span className={certificate ? "" : "text-[var(--color-slate)]/70"}>{certificate || "Selecionar arquivo .pfx"}</span>
           </button>
           <input ref={fileRef} id="fiscal-cert" type="file" accept=".pfx,.p12" className="hidden" data-testid="cert-input" onChange={(event) => setCertificate(event.target.files?.[0]?.name ?? certificate)} />
         </Field>
-        <Field id="fiscal-password" label="Senha do certificado" hint="Enviada só ao servidor, que a exige para o pré-check. Não fica salva neste navegador.">
+        <Field id="fiscal-password" label="Senha do certificado" help={HELP.certificatePassword} hint="Enviada só ao servidor, que a exige para o pré-check. Não fica salva neste navegador.">
           <Input id="fiscal-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="off" placeholder="••••••••" />
         </Field>
-        <Field id="fiscal-partner" label="API parceira" hint="A emissão real está fora do escopo do projeto: as notas são simuladas.">
+        <Field id="fiscal-partner" label="API parceira" help={HELP.partner} hint="A emissão real está fora do escopo do projeto: as notas são simuladas.">
           <Select id="fiscal-partner" value="simulacao" disabled onChange={() => {}}>
             <option value="simulacao">Simulação (sem emissão real)</option>
           </Select>
