@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { config } from "@/config"
-import { newCouponCode, readCoupons, writeCoupons, type Coupon } from "@/customers/coupons"
+import { newCouponCode, readCoupons, writeCoupons, type Coupon, type CouponInput, type CouponUse } from "@/customers/coupons"
 import { readCustomers, writeCustomers, type Customer, type CustomerData } from "@/customers/customers"
-import { createCustomerApi, issueCouponApi, listCouponsApi, listCustomers, updateCustomerApi } from "@/customers/customersApi"
+import { createCustomerApi, disableCouponApi, issueCouponApi, listCouponUsesApi, listCouponsApi, listCustomers, updateCustomerApi } from "@/customers/customersApi"
 import type { Result } from "@/inventory/types"
 import { errorMessage } from "@/lib/api"
-
-/** Desconto do cupom: percentual no modo demonstração, valor fixo em centavos com a API. */
-export type CouponDiscount = { percent: number } | { valueCents: number }
 
 export type CustomersState = {
   customers: Customer[]
@@ -21,7 +18,11 @@ export type CustomersState = {
   /** `id` null cadastra. `restricted` (plano Free) limita o cadastro a CPF e nome. */
   save: (id: string | null, data: CustomerData, restricted: boolean) => Promise<Result<Customer>>
   remove: (id: string) => Promise<Result<null>>
-  issue: (customerId: string, discount: CouponDiscount) => Promise<Result<Coupon>>
+  issue: (input: CouponInput) => Promise<Result<Coupon>>
+  /** Encerra o cupom antes da validade; os usos continuam no histórico. */
+  disable: (id: string) => Promise<Result<null>>
+  /** Quem usou o cupom, mais recentes primeiro. */
+  uses: (id: string) => Promise<Result<CouponUse[]>>
 }
 
 const fail = (error: unknown): { ok: false; error: string } => ({ ok: false, error: errorMessage(error) })
@@ -95,29 +96,72 @@ export function useCustomers(storeId: string): CustomersState {
   )
 
   const issue = useCallback(
-    async (customerId: string, discount: CouponDiscount): Promise<Result<Coupon>> => {
+    async (input: CouponInput): Promise<Result<Coupon>> => {
       if (config.useApi) {
-        if (!("valueCents" in discount)) return { ok: false, error: "Informe o valor do desconto." }
         try {
-          const coupon = await issueCouponApi(customerId, discount.valueCents)
+          const coupon = await issueCouponApi(input)
           setRemote(await fetchAll())
           return { ok: true, value: coupon }
         } catch (failure) {
           return fail(failure)
         }
       }
-      if (!("percent" in discount)) return { ok: false, error: "Informe o percentual do desconto." }
-      const coupon: Coupon = { id: `cup-${Date.now().toString(36)}`, code: newCouponCode(demoCoupons), customerId, percent: discount.percent, createdAt: Date.now() }
-      const next = [...demoCoupons, coupon]
+      // O localStorage pode ter mudado no PDV (resgates) desde que a tela abriu.
+      const current = readCoupons(storeId)
+      const code = input.code?.trim().toUpperCase() || newCouponCode(current)
+      if (current.some((coupon) => coupon.code === code)) return { ok: false, error: "Já existe um cupom com este código nesta loja." }
+      const owner = demoCustomers.find((customer) => customer.id === input.customerId)
+      const coupon: Coupon = {
+        id: `cup-${Date.now().toString(36)}`,
+        code,
+        customerId: input.customerId,
+        ...(owner ? { customerName: owner.name } : {}),
+        percent: input.type === "percent" ? input.amount : 0,
+        ...(input.type === "value" ? { valueCents: input.amount } : {}),
+        ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+        createdAt: Date.now(),
+      }
+      const next = [...current, coupon]
       if (!writeCoupons(storeId, next)) return { ok: false, error: NOT_SAVED }
       setDemoCoupons(next)
       return { ok: true, value: coupon }
     },
-    [demoCoupons, fetchAll, storeId],
+    [demoCustomers, fetchAll, storeId],
+  )
+
+  const disable = useCallback(
+    async (id: string): Promise<Result<null>> => {
+      if (config.useApi) {
+        try {
+          await disableCouponApi(id)
+          setRemote(await fetchAll())
+          return { ok: true, value: null }
+        } catch (failure) {
+          return fail(failure)
+        }
+      }
+      const next = readCoupons(storeId).map((coupon) => (coupon.id === id ? { ...coupon, disabledAt: Date.now() } : coupon))
+      if (!writeCoupons(storeId, next)) return { ok: false, error: NOT_SAVED }
+      setDemoCoupons(next)
+      return { ok: true, value: null }
+    },
+    [fetchAll, storeId],
+  )
+
+  const uses = useCallback(
+    async (id: string): Promise<Result<CouponUse[]>> => {
+      if (!config.useApi) return { ok: true, value: [...(readCoupons(storeId).find((coupon) => coupon.id === id)?.uses ?? [])].reverse() }
+      try {
+        return { ok: true, value: await listCouponUsesApi(id) }
+      } catch (failure) {
+        return fail(failure)
+      }
+    },
+    [storeId],
   )
 
   return useMemo(
-    () => ({ customers, coupons, isLoading: config.useApi && !loaded && !error, error, canRemove: !config.useApi, save, remove, issue }),
-    [coupons, customers, error, issue, loaded, remove, save],
+    () => ({ customers, coupons, isLoading: config.useApi && !loaded && !error, error, canRemove: !config.useApi, save, remove, issue, disable, uses }),
+    [coupons, customers, disable, error, issue, loaded, remove, save, uses],
   )
 }

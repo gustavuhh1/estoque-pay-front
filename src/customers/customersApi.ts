@@ -1,4 +1,4 @@
-import type { Coupon } from "@/customers/coupons"
+import type { Coupon, CouponInput, CouponUse } from "@/customers/coupons"
 import type { Customer, CustomerData } from "@/customers/customers"
 import type { CustomerStats } from "@/customers/metrics"
 import { api } from "@/lib/api"
@@ -20,12 +20,27 @@ type ApiCliente = {
 type ApiCupom = {
   id: string
   cliente_id?: string | null
+  cliente_nome?: string | null
   codigo: string
+  tipo_desconto?: "VALOR" | "PERCENTUAL"
   valor_desconto: number
   expira_em?: string | null
   resgatado_em?: string | null
-  status: "DISPONIVEL" | "RESGATADO" | "EXPIRADO"
+  desativado_em?: string | null
+  usos?: number
+  desconto_total?: number
+  status: "DISPONIVEL" | "RESGATADO" | "EXPIRADO" | "DESATIVADO"
   criado_em: string
+}
+
+type ApiCupomUso = {
+  id: string
+  venda_id: string
+  cliente_id: string
+  cliente_nome?: string | null
+  cpf: string
+  desconto: number
+  usado_em: string
 }
 
 type Page<T> = { data: T[]; total: number }
@@ -52,16 +67,21 @@ function customerOf(item: ApiCliente): Customer {
 }
 
 function couponOf(item: ApiCupom): Coupon {
+  const percent = item.tipo_desconto === "PERCENTUAL"
   return {
     id: item.id,
     code: item.codigo,
     customerId: item.cliente_id ?? "",
-    percent: 0,
-    valueCents: cents(item.valor_desconto),
+    ...(item.cliente_nome ? { customerName: item.cliente_nome } : {}),
+    percent: percent ? item.valor_desconto : 0,
+    ...(percent ? {} : { valueCents: cents(item.valor_desconto) }),
     createdAt: Date.parse(item.criado_em),
     ...(item.resgatado_em ? { redeemedAt: Date.parse(item.resgatado_em) } : {}),
     ...(item.expira_em ? { expiresAt: Date.parse(item.expira_em) } : {}),
+    ...(item.desativado_em ? { disabledAt: Date.parse(item.desativado_em) } : {}),
     ...(item.status === "EXPIRADO" ? { expired: true } : {}),
+    usesCount: item.usos ?? (item.resgatado_em ? 1 : 0),
+    discountTotalCents: cents(item.desconto_total ?? 0),
   }
 }
 
@@ -103,9 +123,33 @@ export async function listCouponsApi(): Promise<Coupon[]> {
   return (await api.get<ApiCupom[]>("/crm/cupons")).map(couponOf)
 }
 
-/** Cupom de valor fixo, nominal, sem validade. O código é gerado pela API. */
-export async function issueCouponApi(customerId: string, valueCents: number): Promise<Coupon> {
-  return couponOf(await api.post<ApiCupom>("/crm/cupons", { cliente_id: customerId, valor_desconto: valueCents / 100 }))
+/** Individual (com cliente) ou global; em % ou R$; validade e código opcionais (sem código, a API gera). */
+export async function issueCouponApi(input: CouponInput): Promise<Coupon> {
+  return couponOf(
+    await api.post<ApiCupom>("/crm/cupons", {
+      ...(input.customerId ? { cliente_id: input.customerId } : {}),
+      ...(input.code ? { codigo: input.code } : {}),
+      tipo_desconto: input.type === "percent" ? "PERCENTUAL" : "VALOR",
+      valor_desconto: input.type === "percent" ? input.amount : input.amount / 100,
+      ...(input.expiresAt ? { expira_em: new Date(input.expiresAt).toISOString() } : {}),
+    }),
+  )
+}
+
+export async function disableCouponApi(id: string): Promise<Coupon> {
+  return couponOf(await api.patch<ApiCupom>(`/crm/cupons/${id}/desativar`))
+}
+
+export async function listCouponUsesApi(id: string): Promise<CouponUse[]> {
+  return (await api.get<ApiCupomUso[]>(`/crm/cupons/${id}/usos`)).map((uso) => ({
+    id: uso.id,
+    customerId: uso.cliente_id,
+    ...(uso.cliente_nome ? { customerName: uso.cliente_nome } : {}),
+    cpf: uso.cpf,
+    discountCents: cents(uso.desconto),
+    usedAt: Date.parse(uso.usado_em),
+    saleId: uso.venda_id,
+  }))
 }
 
 /** Estatísticas e últimas compras de um cliente, calculadas pela API sobre todas as vendas dele. */

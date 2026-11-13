@@ -22,6 +22,7 @@ import Pdv from "@/pages/Pdv"
 import Sales from "@/pages/Sales"
 import Stock from "@/pages/Stock"
 import Customers from "@/pages/Customers"
+import Coupons from "@/pages/Coupons"
 import SettingsPage from "@/pages/Settings"
 import Profile from "@/pages/Profile"
 
@@ -50,6 +51,7 @@ export default function App() {
                     <Route path="/vendas" element={<Sales />} />
                     <Route path="/estoque" element={<Stock />} />
                     <Route path="/clientes" element={<Customers />} />
+                    <Route path="/cupons" element={<Coupons />} />
                     <Route path="/ajustes" element={<SettingsPage />} />
                     <Route path="/perfil" element={<Profile />} />
                   </Route>
