@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { ArrowRight, Calculator, Check, CircleCheck, FileText, Minus, Package, QrCode, TrendingUp, Users, type LucideIcon } from "lucide-react"
 
@@ -53,8 +54,15 @@ const PAINEL = "/painel"
 export default function Landing() {
   const { isAuthenticated, isLoading } = useAuth()
   // Enquanto a sessão carrega, os botões de acesso ficam ocultos (mas ocupando espaço) para não piscar o par errado.
-  const ocultoAoCarregar = isLoading ? "invisible" : ""
-  const ocultoProps = isLoading ? { "aria-hidden": true, tabIndex: -1 } : {}
+  // Só por até 1 s: se a API estiver acordando, o visitante não pode ficar sem botão de entrar.
+  const [paciencia, setPaciencia] = useState(true)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPaciencia(false), 1000)
+    return () => window.clearTimeout(timer)
+  }, [])
+  const esconder = isLoading && paciencia
+  const ocultoAoCarregar = esconder ? "invisible" : ""
+  const ocultoProps = esconder ? { "aria-hidden": true, tabIndex: -1 } : {}
   const destinoPlano = isAuthenticated ? PAINEL : "/cadastro"
 
   return (
