@@ -1,12 +1,13 @@
 import { CreditCard, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog } from "@/components/ui/dialog"
-import { PRICE_CENTS, TRIAL_DAYS, type PlanCycle, type Subscription } from "@/billing/plan"
+import { PRICE_CENTS, TRIAL_DAYS, rememberCheckout, type PlanCycle, type Subscription } from "@/billing/plan"
 import { api, errorMessage } from "@/lib/api"
 import { formatBRL } from "@/lib/format"
+import { useStores } from "@/store/useStores"
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" })
 
@@ -21,16 +22,38 @@ type SubscriptionTabApiProps = {
 
 /** Assinatura pela API: o cartão é informado na página da AbacatePay e o plano só muda quando o webhook chega. */
 export default function SubscriptionTabApi({ subscription, restricted, isOwner, isLoading, refresh, onNotify }: SubscriptionTabApiProps) {
+  const { activeStore } = useStores()
   const [busy, setBusy] = useState<PlanCycle | "cancel" | "refresh" | null>(null)
   const [canceling, setCanceling] = useState(false)
 
   const premium = subscription.status === "TRIAL" || subscription.status === "ACTIVE"
+
+  // Volta do checkout (?assinatura=concluida): a AbacatePay pode levar alguns segundos para confirmar o cartão,
+  // então pergunta de novo algumas vezes até o Premium aparecer.
+  const [returning] = useState(() => new URLSearchParams(window.location.search).get("assinatura") === "concluida")
+  const tries = useRef(0)
+  useEffect(() => {
+    if (!returning || premium || tries.current >= 8) return
+    const timer = window.setTimeout(() => {
+      tries.current += 1
+      void refresh()
+    }, tries.current === 0 ? 0 : 3000)
+    return () => window.clearTimeout(timer)
+  }, [premium, refresh, returning, subscription])
+
+  useEffect(() => {
+    if (!returning || !premium) return
+    onNotify("Assinatura confirmada! Sua loja agora é Premium.", "success")
+    window.history.replaceState(null, "", window.location.pathname)
+  }, [onNotify, premium, returning])
   const current = premium || subscription.status === "PAST_DUE" ? subscription.cycle : null
 
   async function subscribe(cycle: PlanCycle) {
     setBusy(cycle)
     try {
-      const checkout = await api.post<{ checkout_url: string }>("/billing/assinatura", { tipo_plano: cycle })
+      const checkout = await api.post<{ checkout_url: string; checkout_id: string }>("/billing/assinatura", { tipo_plano: cycle })
+      // Guardado para confirmar com a AbacatePay na volta, sem depender só do webhook.
+      rememberCheckout(activeStore.id, checkout.checkout_id)
       // O cartão nunca passa pelo EstoquePay: o cliente informa na página segura da AbacatePay.
       window.location.assign(checkout.checkout_url)
     } catch (failure) {

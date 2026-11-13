@@ -151,11 +151,48 @@ const FREE_STATE: PlanState = { subscription: { status: "FREE", cycle: "MENSAL" 
 const apiCache = new Map<string, PlanState>()
 const inflight = new Set<string>()
 
+/**
+ * Checkout da AbacatePay ainda não confirmado, por loja. O plano só mudaria pelo webhook; enquanto este
+ * checkout existir, cada consulta do plano pede à API para confirmá-lo direto com a AbacatePay.
+ */
+const checkoutKey = (storeId: string) => `estoquepay.checkout.${storeId}`
+
+export function rememberCheckout(storeId: string, checkoutId: string) {
+  try {
+    localStorage.setItem(checkoutKey(storeId), checkoutId)
+  } catch {
+    // Sem armazenamento a confirmação fica só com o webhook.
+  }
+}
+
+function pendingCheckout(storeId: string) {
+  try {
+    return localStorage.getItem(checkoutKey(storeId))
+  } catch {
+    return null
+  }
+}
+
+async function fetchPlan(storeId: string) {
+  const checkoutId = pendingCheckout(storeId)
+  if (checkoutId) {
+    try {
+      const data = await api.post<ApiAssinatura>("/billing/assinatura/sincronizar", { checkout_id: checkoutId })
+      // Confirmado (ou já resolvido por outro caminho): não precisa perguntar de novo.
+      if (data.status) localStorage.removeItem(checkoutKey(storeId))
+      return data
+    } catch {
+      // API sem a rota ou provedor fora do ar: segue com a consulta normal.
+    }
+  }
+  return api.get<ApiAssinatura>("/billing/assinatura")
+}
+
 async function loadApiPlan(storeId: string) {
   if (inflight.has(storeId)) return
   inflight.add(storeId)
   try {
-    apiCache.set(storeId, fromApi(await api.get<ApiAssinatura>("/billing/assinatura")))
+    apiCache.set(storeId, fromApi(await fetchPlan(storeId)))
     listeners.forEach((listener) => listener())
   } catch {
     // Sem resposta, a loja segue com o plano que já estava no cache (ou Free): o erro aparece nas telas que dependem dele.
