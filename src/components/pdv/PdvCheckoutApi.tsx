@@ -16,6 +16,7 @@ import { useBuyer } from "@/pdv/useBuyer"
 import { fetchNota, manualToSale, payManual, pixStatus, pixToSale, simulatePix, startPix, cancelSaleApi, type Espelho, type PixPayment } from "@/pdv/pdvApi"
 import type { PaymentMethod, Sale } from "@/inventory/types"
 import { useInventory } from "@/inventory/useInventory"
+import { requestNotificationsRefresh } from "@/notifications/events"
 import { useStores } from "@/store/useStores"
 
 type CartLine = { productId: string; quantity: number }
@@ -50,6 +51,8 @@ function PixWaiting({ pix, onPaid, onExpired, onBack }: PixWaitingProps) {
     try {
       const status = await pixStatus(pix.payment_id)
       if (status.status_pagamento === "PAGO" || paidStates.includes(status.status)) {
+        // A confirmação do Pix gera aviso na API ("Pix confirmado"): o sininho já busca.
+        requestNotificationsRefresh()
         handlers.current.onPaid()
         return true
       }

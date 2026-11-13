@@ -1,8 +1,9 @@
-import { Bell, Menu, ShoppingCart } from "lucide-react"
+import { Menu, ShoppingCart } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import CashStatus from "@/components/layout/CashStatus"
 import GlobalSearch from "@/components/layout/GlobalSearch"
+import NotificationsMenu from "@/components/layout/NotificationsMenu"
 import StoreSwitcher from "@/components/layout/StoreSwitcher"
 import { useAuth } from "@/auth/useAuth"
 
@@ -56,14 +57,7 @@ export default function DashboardHeader({ onOpenSidebar, pdv = false }: Dashboar
               <span className="hidden xl:inline">Nova Venda</span>
             </Link>
           )}
-          <button
-            type="button"
-            aria-label="Notificações"
-            className="relative hidden h-10 w-10 items-center justify-center rounded-xl text-[var(--color-slate)] transition hover:bg-[var(--color-nav)] sm:flex"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[var(--color-alert)]" />
-          </button>
+          <NotificationsMenu />
           {/* Nome, cargo e foto já estão na sidebar; aqui fica a situação do caixa. */}
           <div className="border-[var(--color-border)] sm:border-l sm:pl-4">
             <CashStatus />
