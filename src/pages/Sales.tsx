@@ -1,4 +1,4 @@
-import { Banknote, Download, FileDown, FileText, Lock, LockOpen, QrCode, RotateCcw, Search, TriangleAlert, X } from "lucide-react"
+import { Banknote, Download, FileText, Lock, LockOpen, QrCode, ReceiptText, RotateCcw, Search, TriangleAlert, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import CategoryScroller from "@/components/CategoryScroller"
@@ -92,18 +92,16 @@ type SaleActionsProps = { sale: Sale; canManage: boolean; onNote: () => void; on
 
 function SaleActions({ sale, canManage, onNote, onCancel }: SaleActionsProps) {
   const done = sale.status === "concluida"
-  const hasNote = done && sale.nfce !== false
   return (
     <span className="inline-flex gap-0.5">
       <button
         type="button"
-        aria-label={`Ver nota simulada da venda ${saleLabel(sale)}`}
-        title={hasNote ? "Ver nota (simulada)" : "Esta venda não gerou NFC-e"}
-        disabled={!hasNote}
+        aria-label={`Ver comprovante da venda ${saleLabel(sale)}`}
+        title="Ver comprovante"
         onClick={onNote}
-        className="rounded-lg p-2 text-[var(--color-slate)] transition hover:bg-[var(--color-paper-dim)] hover:text-[var(--color-ink)] disabled:opacity-40"
+        className="rounded-lg p-2 text-[var(--color-slate)] transition hover:bg-[var(--color-paper-dim)] hover:text-[var(--color-ink)]"
       >
-        <FileDown className="h-[18px] w-[18px]" />
+        <ReceiptText className="h-[18px] w-[18px]" />
       </button>
       <button
         type="button"
