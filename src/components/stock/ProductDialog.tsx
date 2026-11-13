@@ -1,4 +1,4 @@
-import { Save, ScanBarcode } from "lucide-react"
+import { Save, ScanBarcode, TrendingDown, TrendingUp } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import Field from "@/components/Field"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { MoneyInput } from "@/components/ui/money-input"
 import { Select } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { centsToInput, formatQuantity } from "@/lib/format"
+import { centsToInput, formatBRL, formatQuantity, parseMoneyToCents } from "@/lib/format"
 import { useBusy } from "@/lib/useBusy"
 import { missingFiscal, validateProductForm, type ProductFormErrors, type RawProductForm } from "@/inventory/logic"
 import type { Product } from "@/inventory/types"
@@ -26,6 +26,45 @@ const unitOptions = [
   { value: "KG", label: "Fracionado (kg)" },
   { value: "LT", label: "Fracionado (litro)" },
 ]
+
+/** Lucro por unidade enquanto o dono digita custo e venda: verde com lucro, vermelho com prejuízo. */
+function ProfitPreview({ cost, price }: { cost: string; price: string }) {
+  const costCents = parseMoneyToCents(cost) ?? 0
+  const priceCents = parseMoneyToCents(price) ?? 0
+  const box = "sm:col-span-2 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm"
+
+  if (!costCents || !priceCents) {
+    return (
+      <div aria-live="polite" className={`${box} border-dashed border-[var(--color-border)] text-[var(--color-slate)]`}>
+        <TrendingUp className="h-4 w-4 shrink-0" />
+        Preencha o custo e o preço de venda para ver quanto você lucra em cada unidade.
+      </div>
+    )
+  }
+
+  const profit = priceCents - costCents
+  // Margem sobre o preço de venda: de cada R$ 100 vendidos, quanto fica para a loja.
+  const margin = Math.round((profit / priceCents) * 1000) / 10
+  const loss = profit < 0
+
+  return (
+    <div
+      aria-live="polite"
+      className={`${box} ${loss ? "border-[var(--color-alert)]/25 bg-[var(--color-alert-soft)] text-[var(--color-alert-dark)]" : "border-[var(--color-amber)]/20 bg-[var(--color-stock-green-soft)] text-[var(--color-stock-green)]"}`}
+    >
+      {loss ? <TrendingDown className="h-5 w-5 shrink-0" /> : <TrendingUp className="h-5 w-5 shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="font-bold">
+          {loss ? "Prejuízo de " : profit === 0 ? "Sem lucro: " : "Lucro de "}
+          <span className={mono}>{formatBRL(Math.abs(profit))}</span> por unidade
+        </p>
+        <p className="text-xs opacity-80">
+          {loss ? "O preço de venda está abaixo do custo. A trava anti-prejuízo vai bloquear essa venda." : `Margem de ${margin.toLocaleString("pt-BR")}% sobre o preço de venda.`}
+        </p>
+      </div>
+    </div>
+  )
+}
 
 const toForm = (product: Product | null, firstCategory: string, defaultCfop: string): RawProductForm =>
   product
@@ -189,16 +228,31 @@ export default function ProductDialog({ product, initialEan = "", onClose, onSav
           <Field id="minStock" label="Quantidade mínima" error={errors.minStock} hint={errors.minStock ? undefined : "Abaixo disso o produto entra em “para repor”."}>
             <Input id="minStock" value={form.minStock} onChange={set("minStock")} inputMode="decimal" placeholder="10" className={mono} {...aria("minStock")} />
           </Field>
-          <Field id="cost" label="Preço de custo" error={errors.cost}>
+          <Field id="cost" label="Preço de custo" error={errors.cost} help="Quanto você pagou por uma unidade do produto ao fornecedor. Com ele o sistema mostra seu lucro e impede vender no prejuízo.">
+
             <MoneyInput id="cost" value={form.cost} onValueChange={(value) => set("cost")({ target: { value } })} placeholder="0,00" {...aria("cost")} />
           </Field>
           <Field id="price" label="Preço de venda" error={errors.price} hint="A trava anti-prejuízo bloqueia venda abaixo do custo." required>
             <MoneyInput id="price" aria-required="true" value={form.price} onValueChange={(value) => set("price")({ target: { value } })} placeholder="0,00" {...aria("price")} />
           </Field>
-          <Field id="ncm" label="NCM" error={errors.ncm} required={nfceEnabled}>
+          <ProfitPreview cost={form.cost} price={form.price} />
+          <Field
+            id="ncm"
+            label="NCM"
+            error={errors.ncm}
+            required={nfceEnabled}
+            help="É o “RG” do produto para a Receita: um código de 8 números que diz o que ele é (ex.: café torrado = 0901.21.00). Está na nota fiscal de compra do seu fornecedor; se não achar, peça ao seu contador."
+          >
             <Input id="ncm" aria-required={nfceEnabled} value={form.ncm} onChange={set("ncm")} inputMode="numeric" placeholder="0901.21.00" className={mono} {...aria("ncm")} />
           </Field>
-          <Field id="cfop" label="CFOP" error={errors.cfop} hint="5102 para venda dentro do estado." required={nfceEnabled}>
+          <Field
+            id="cfop"
+            label="CFOP"
+            error={errors.cfop}
+            hint="5102 para venda dentro do estado."
+            required={nfceEnabled}
+            help="Código de 4 números que diz o tipo da venda na nota fiscal. Para quem revende produtos comprados de outros, vendendo ao consumidor no balcão, quase sempre é 5102. Na dúvida, confirme com seu contador."
+          >
             <Input id="cfop" aria-required={nfceEnabled} value={form.cfop} onChange={set("cfop")} inputMode="numeric" placeholder="5102" className={mono} {...aria("cfop")} />
           </Field>
           <div className="sm:col-span-2">
