@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { ArrowRight, Calculator, Check, CircleCheck, FileText, Minus, Package, QrCode, TrendingUp, Users, type LucideIcon } from "lucide-react"
 
 import logo from "@/assets/brand/logo-estoquepay.jpg"
+import { useAuth } from "@/auth/useAuth"
 
 const features: { icon: LucideIcon; title: string; description: string; id?: string }[] = [
   {
@@ -46,7 +47,16 @@ const brandButton =
   "inline-flex items-center gap-2 rounded-xl border border-[var(--color-amber)] bg-[var(--color-amber)] font-bold uppercase tracking-[0.08em] text-white shadow-[0_8px_20px_rgba(0,108,73,0.25)] transition-colors hover:bg-[var(--color-amber-dark)]"
 const card = "rounded-2xl border border-[var(--color-border)] bg-white shadow-[0_1px_2px_rgba(11,28,48,0.04),0_1px_3px_rgba(11,28,48,0.06)]"
 
+/** Mesmo destino do login: o ProtectedRoute leva ao onboarding (conta sem loja) ou ao PDV (Caixa) quando for o caso. */
+const PAINEL = "/painel"
+
 export default function Landing() {
+  const { isAuthenticated, isLoading } = useAuth()
+  // Enquanto a sessão carrega, os botões de acesso ficam ocultos (mas ocupando espaço) para não piscar o par errado.
+  const ocultoAoCarregar = isLoading ? "invisible" : ""
+  const ocultoProps = isLoading ? { "aria-hidden": true, tabIndex: -1 } : {}
+  const destinoPlano = isAuthenticated ? PAINEL : "/cadastro"
+
   return (
     <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)]">
       <header className="border-b border-[var(--color-border)]">
@@ -58,8 +68,14 @@ export default function Landing() {
             <a href="#recursos" className={`hidden md:inline ${navLink}`}>Recursos</a>
             <a href="#precos" className={`hidden md:inline ${navLink}`}>Preços</a>
             <a href="#fiscal" className={`hidden md:inline ${navLink}`}>Fiscal</a>
-            <Link to="/login" className="text-xs font-extrabold uppercase tracking-[0.08em] text-[var(--color-amber)] hover:underline">Entrar</Link>
-            <Link to="/cadastro" className={`h-10 whitespace-nowrap px-4 text-[13px] sm:h-11 sm:px-5 sm:text-[15px] ${brandButton}`}>Começar agora</Link>
+            {isAuthenticated ? (
+              <Link to={PAINEL} className={`h-10 whitespace-nowrap px-4 text-[13px] sm:h-11 sm:px-5 sm:text-[15px] ${brandButton}`}>Ir para o painel</Link>
+            ) : (
+              <>
+                <Link to="/login" {...ocultoProps} className={`text-xs font-extrabold uppercase tracking-[0.08em] text-[var(--color-amber)] hover:underline ${ocultoAoCarregar}`}>Entrar</Link>
+                <Link to="/cadastro" {...ocultoProps} className={`h-10 whitespace-nowrap px-4 text-[13px] sm:h-11 sm:px-5 sm:text-[15px] ${brandButton} ${ocultoAoCarregar}`}>Começar agora</Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -74,11 +90,20 @@ export default function Landing() {
               Estoque, PDV, Pix e nota fiscal no mesmo lugar. Feito para mercearias, bodegas e docerias que precisam de controle sem complicação.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-[100px] gap-y-3">
-              <Link to="/cadastro" className={`h-9 px-4 text-[17px] ${brandButton}`}>
-                Começar agora
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <span className="text-[13px] font-medium text-[var(--color-slate)]">7 dias grátis · cancele quando quiser</span>
+              {isAuthenticated ? (
+                <Link to={PAINEL} className={`h-9 px-4 text-[17px] ${brandButton}`}>
+                  Ir para o painel
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              ) : (
+                <>
+                  <Link to="/cadastro" {...ocultoProps} className={`h-9 px-4 text-[17px] ${brandButton} ${ocultoAoCarregar}`}>
+                    Começar agora
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <span className={`text-[13px] font-medium text-[var(--color-slate)] ${ocultoAoCarregar}`}>7 dias grátis · cancele quando quiser</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -112,7 +137,7 @@ export default function Landing() {
               <p className="mt-2 text-[40px] font-extrabold leading-[1.1] tracking-[-0.03em]">R$ 0</p>
               <PlanList items={freeItems} icon={Minus} />
               <Link
-                to="/cadastro"
+                to={destinoPlano}
                 className="inline-flex h-11 w-fit items-center rounded-xl border border-[var(--color-border)] bg-white px-5 text-[15px] font-bold shadow-[0_1px_2px_rgba(11,28,48,0.06)] hover:bg-[var(--color-paper)]"
               >
                 Continuar no Free
@@ -129,7 +154,7 @@ export default function Landing() {
               </p>
               <p className="mt-1 text-[13px] font-medium text-[var(--color-slate)]">ou R$ 299,90 por ano</p>
               <PlanList items={premiumItems} icon={Check} iconClass="text-[var(--color-amber)]" />
-              <Link to="/cadastro" className={`mt-6 h-11 w-fit px-5 text-[15px] ${brandButton}`}>Ativar Premium</Link>
+              <Link to={destinoPlano} className={`mt-6 h-11 w-fit px-5 text-[15px] ${brandButton}`}>Ativar Premium</Link>
             </div>
           </div>
           <p className="mt-5 text-center text-[13px] font-medium leading-[1.55] text-[var(--color-slate)]">
